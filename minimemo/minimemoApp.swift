@@ -179,22 +179,6 @@ class AppState: ObservableObject {
     }
 }
 
-// --- データモデル (後で詳細化) ---
-struct Schedule: Identifiable, Codable { // Codableは保存/読み込み用
-    let id = UUID()
-    var title: String
-    var date: Date
-    var meetLink: String? // Google Meetのリンク用
-    // 他に必要なプロパティ（場所、詳細など）
-}
-
-struct Note: Identifiable, Codable {
-    let id = UUID()
-    var content: String
-    var createdAt: Date = Date()
-    // 他に必要なプロパティ
-}
-
 // --- 各機能のビュー (ContentView内で呼び出す) ---
 // ScheduleListView, NoteListView などを具体的に実装していく
 // 例: ScheduleListView
