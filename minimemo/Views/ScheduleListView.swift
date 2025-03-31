@@ -12,12 +12,28 @@ struct ScheduleListView: View {
     @State private var newScheduleTitle: String = ""
     @State private var selectedTime: Date = Date()  // 日付ではなく時間のみ
 
+    // 共通のスケジュール追加処理を関数化
+    private func addSchedule() {
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month, .day], from: Date())
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: selectedTime)
+        components.hour = timeComponents.hour
+        components.minute = timeComponents.minute
+
+        let combinedDate = calendar.date(from: components)!
+        viewModel.addSchedule(title: newScheduleTitle, date: combinedDate)
+        newScheduleTitle = ""
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // 新規スケジュール入力部分
             HStack(spacing: 8) {
                 TextField("新規スケジュール", text: $newScheduleTitle)
                     .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        addSchedule()
+                    }
 
                 // 時間のみのDatePicker
                 DatePicker("", selection: $selectedTime, displayedComponents: .hourAndMinute)
@@ -26,17 +42,7 @@ struct ScheduleListView: View {
                     .padding(.horizontal, -20)  // 余白を調整（負のパディング）
 
                 Button(action: {
-                    // 現在の日付に選択した時間を設定
-                    let calendar = Calendar.current
-                    var components = calendar.dateComponents([.year, .month, .day], from: Date())
-                    let timeComponents = calendar.dateComponents(
-                        [.hour, .minute], from: selectedTime)
-                    components.hour = timeComponents.hour
-                    components.minute = timeComponents.minute
-
-                    let combinedDate = calendar.date(from: components)!
-                    viewModel.addSchedule(title: newScheduleTitle, date: combinedDate)
-                    newScheduleTitle = ""
+                    addSchedule()
                 }) {
                     Image(systemName: "plus.circle.fill")
                 }

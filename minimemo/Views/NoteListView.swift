@@ -11,16 +11,27 @@ struct NoteListView: View {
     @EnvironmentObject var viewModel: AppViewModel
     @State private var newNoteContent: String = ""
 
+    // 共通のメモ追加処理を関数化
+    private func addNote() {
+        guard !newNoteContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        viewModel.addNote(content: newNoteContent)
+        newNoteContent = ""
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // 新規メモ入力部分
             HStack(spacing: 8) {
                 TextField("新規メモ", text: $newNoteContent)
                     .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        addNote()
+                    }
 
                 Button(action: {
-                    viewModel.addNote(content: newNoteContent)
-                    newNoteContent = ""
+                    addNote()
                 }) {
                     Image(systemName: "plus.circle.fill")
                 }
