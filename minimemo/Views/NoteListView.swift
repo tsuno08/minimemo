@@ -10,24 +10,31 @@ import SwiftUI
 struct NoteListView: View {
     @EnvironmentObject var viewModel: AppViewModel
     @State private var newNoteContent: String = ""
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // 新規メモ入力部分
-            HStack {
+            HStack(spacing: 8) {
                 TextField("新規メモ", text: $newNoteContent)
                     .textFieldStyle(.roundedBorder)
-                
+
                 Button(action: {
                     viewModel.addNote(content: newNoteContent)
                     newNoteContent = ""
                 }) {
                     Image(systemName: "plus.circle.fill")
                 }
+                .buttonStyle(.borderless)
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
                 .disabled(newNoteContent.isEmpty)
             }
-            .padding(.horizontal)
-            
+
             // メモ一覧
             List {
                 ForEach(viewModel.notes) { note in
@@ -41,6 +48,13 @@ struct NoteListView: View {
                                 .foregroundColor(.red)
                         }
                         .buttonStyle(.borderless)
+                        .onHover { hovering in
+                            if hovering {
+                                NSCursor.pointingHand.push()
+                            } else {
+                                NSCursor.pop()
+                            }
+                        }
                     }
                 }
                 .onDelete { indices in

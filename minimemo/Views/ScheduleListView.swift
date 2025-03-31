@@ -10,41 +10,59 @@ import SwiftUI
 struct ScheduleListView: View {
     @EnvironmentObject var viewModel: AppViewModel
     @State private var newScheduleTitle: String = ""
-    @State private var selectedDate: Date = Date()
-    
+    @State private var selectedTime: Date = Date()  // 日付ではなく時間のみ
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // 新規スケジュール入力部分
-            HStack {
+            HStack(spacing: 8) {
                 TextField("新規スケジュール", text: $newScheduleTitle)
                     .textFieldStyle(.roundedBorder)
-                
-                DatePicker("", selection: $selectedDate)
+
+                // 時間のみのDatePicker
+                DatePicker("", selection: $selectedTime, displayedComponents: .hourAndMinute)
                     .labelsHidden()
-                
+                    .frame(width: 100)
+                    .padding(.horizontal, -20)  // 余白を調整（負のパディング）
+
                 Button(action: {
-                    viewModel.addSchedule(title: newScheduleTitle, date: selectedDate)
+                    // 現在の日付に選択した時間を設定
+                    let calendar = Calendar.current
+                    var components = calendar.dateComponents([.year, .month, .day], from: Date())
+                    let timeComponents = calendar.dateComponents(
+                        [.hour, .minute], from: selectedTime)
+                    components.hour = timeComponents.hour
+                    components.minute = timeComponents.minute
+
+                    let combinedDate = calendar.date(from: components)!
+                    viewModel.addSchedule(title: newScheduleTitle, date: combinedDate)
                     newScheduleTitle = ""
                 }) {
                     Image(systemName: "plus.circle.fill")
                 }
+                .buttonStyle(.borderless)
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
                 .disabled(newScheduleTitle.isEmpty)
             }
-            .padding(.horizontal)
-            
-            // スケジュール一覧
+
+            // スケジュール一覧（既存のコードを保持）
             List {
                 ForEach(viewModel.schedules) { schedule in
                     HStack {
                         VStack(alignment: .leading) {
                             Text(schedule.title)
-                            Text(schedule.date.formatted(date: .abbreviated, time: .shortened))
+                            Text(schedule.date.formatted(date: .omitted, time: .shortened))  // 時間のみ表示
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
                         Spacer()
-                        
+
                         if let meetLink = schedule.meetLink {
                             Button("Meet") {
                                 if let url = URL(string: meetLink) {
@@ -53,12 +71,19 @@ struct ScheduleListView: View {
                             }
                             .buttonStyle(.link)
                         }
-                        
+
                         Button(action: {
                             viewModel.deleteSchedule(schedule)
                         }) {
                             Image(systemName: "trash")
                                 .foregroundColor(.red)
+                        }
+                        .onHover { hovering in
+                            if hovering {
+                                NSCursor.pointingHand.push()
+                            } else {
+                                NSCursor.pop()
+                            }
                         }
                         .buttonStyle(.borderless)
                     }
@@ -69,7 +94,7 @@ struct ScheduleListView: View {
                     }
                 }
             }
-            .frame(height: 200)
+            .frame(height: 150)
         }
     }
 }
