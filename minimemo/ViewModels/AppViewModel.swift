@@ -267,49 +267,49 @@ class AppViewModel: ObservableObject {
     // MARK: - Meet Link Scheduling
 
     // 指定したイベントのMeetリンクタイマーを設定
-    private func scheduleMeetLinkOpening(for event: Schedule) {
-        guard event.isGoogleCalendarSchedule, // Googleカレンダーのイベントのみ対象とする場合
-              let meetLink = event.meetLink,
+    private func scheduleMeetLinkOpening(for schedule: Schedule) {
+        guard schedule.isGoogleCalendarSchedule, // Googleカレンダーのイベントのみ対象とする場合
+              let meetLink = schedule.meetLink,
               !meetLink.isEmpty,
-              event.date > Date() // 開始時刻が未来のイベントのみ
+              schedule.date > Date() // 開始時刻が未来のイベントのみ
         else {
             return
         }
 
-        let timeInterval = event.date.timeIntervalSinceNow
-        print("Meetリンクタイマー設定: \(event.title) (\(event.id)) - \(timeInterval)秒後")
+        let timeInterval = schedule.date.timeIntervalSinceNow
+        print("Meetリンクタイマー設定: \(schedule.title) (\(schedule.id)) - \(timeInterval)秒後")
 
         // 既存のタイマーがあればキャンセル
-        cancelMeetLinkTimer(for: event.id)
+        cancelMeetLinkTimer(for: schedule.id)
 
         let timer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
-            print("時間です: \(event.title) - Meetリンクを開きます: \(meetLink)")
+            print("時間です: \(schedule.title) - Meetリンクを開きます: \(meetLink)")
             if let url = URL(string: meetLink) {
                 NSWorkspace.shared.open(url) // デフォルトブラウザでURLを開く
                 // オプション: 通知を表示する
-                self?.showMeetNotification(for: event)
+                self?.showMeetNotification(for: schedule)
             }
             // タイマー完了後に辞書から削除
-            self?.meetLinkTimers.removeValue(forKey: event.id)
+            self?.meetLinkTimers.removeValue(forKey: schedule.id)
         }
-        meetLinkTimers[event.id] = timer
+        meetLinkTimers[schedule.id] = timer
     }
 
     // 全ての有効なイベントに対してMeetリンクタイマーを設定/再設定
     func scheduleMeetLinkOpening() {
         cancelAllMeetLinkTimers() // 既存のタイマーを全てキャンセル
         print("既存のMeetリンクタイマーをキャンセルし、再スケジュールします。")
-        for event in schedules {
-            scheduleMeetLinkOpening(for: event)
+        for schedule in schedules {
+            scheduleMeetLinkOpening(for: schedule)
         }
     }
 
     // 指定したIDのタイマーをキャンセル
-    private func cancelMeetLinkTimer(for eventId: UUID) {
-        if let timer = meetLinkTimers[eventId] {
+    private func cancelMeetLinkTimer(for scheduleId: UUID) {
+        if let timer = meetLinkTimers[scheduleId] {
             timer.invalidate()
-            meetLinkTimers.removeValue(forKey: eventId)
-            print("Meetリンクタイマーキャンセル: \(eventId)")
+            meetLinkTimers.removeValue(forKey: scheduleId)
+            print("Meetリンクタイマーキャンセル: \(scheduleId)")
         }
     }
 
@@ -345,11 +345,11 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Notifications (Optional)
 
-    private func showMeetNotification(for event: Schedule) {
+    private func showMeetNotification(for schedule: Schedule) {
         // UserNotificationsフレームワークを使って通知を表示する
         // 事前にユーザーからの通知許可を得る必要がある (アプリ起動時など)
         let content = UNMutableNotificationContent()
-        content.title = "まもなく開始: \(event.title)"
+        content.title = "まもなく開始: \(schedule.title)"
         content.body = "Google Meetに参加しますか？"
         content.sound = .default
 
@@ -385,12 +385,12 @@ class AppViewModel: ObservableObject {
 
 // UserDefaultsを使った簡単な永続化サービスの例
 class UserDefaultsPersistenceService: PersistenceService {
-    private let eventsKey = "eventsData"
+    private let schedulesKey = "schedulesData"
     private let notesKey = "notesData"
     private let googleTokenKey = "googleAuthToken"
 
     func loadSchedules() -> [Schedule] {
-        guard let data = UserDefaults.standard.data(forKey: eventsKey),
+        guard let data = UserDefaults.standard.data(forKey: schedulesKey),
               let items = try? JSONDecoder().decode([Schedule].self, from: data) else {
             return []
         }
@@ -398,12 +398,22 @@ class UserDefaultsPersistenceService: PersistenceService {
     }
     func saveSchedules(_ items: [Schedule]) {
         if let data = try? JSONEncoder().encode(items) {
-            UserDefaults.standard.set(data, forKey: eventsKey)
+            UserDefaults.standard.set(data, forKey: schedulesKey)
         }
     }
     // loadNotes, saveNotes も同様に実装...
-    func loadNotes() -> [Note] { /* ... */ return [] }
-    func saveNotes(_ items: [Note]) { /* ... */ }
+    func loadNotes() -> [Note] {
+        guard let data = UserDefaults.standard.data(forKey: notesKey),
+              let items = try? JSONDecoder().decode([Note].self, from: data) else {
+            return []
+        }
+        return items
+    }
+    func saveNotes(_ items: [Note]) {
+        if let data = try? JSONEncoder().encode(items) {
+            UserDefaults.standard.set(data, forKey: notesKey)
+        }
+    }
 
     func loadGoogleAuthToken() -> String? {
         return UserDefaults.standard.string(forKey: googleTokenKey)
@@ -412,7 +422,7 @@ class UserDefaultsPersistenceService: PersistenceService {
         UserDefaults.standard.set(token, forKey: googleTokenKey)
     }
     func clearAllData() {
-        UserDefaults.standard.removeObject(forKey: eventsKey)
+        UserDefaults.standard.removeObject(forKey: schedulesKey)
         UserDefaults.standard.removeObject(forKey: notesKey)
         // トークンも消す場合
         UserDefaults.standard.removeObject(forKey: googleTokenKey)
@@ -439,16 +449,16 @@ class MockGoogleCalendarService: GoogleCalendarService {
                                     date: Calendar.current.date(byAdding: .hour, value: 1, to: Date())!, // 1時間後
                                     meetLink: "https://meet.google.com/mock-abc-def",
                                     isGoogleCalendarSchedule: true,
-                                    googleScheduleId: "mock_event_1")
+                                    googleScheduleId: "mock_schedule_1")
         let dummySchedule2 = Schedule(title: "[Mock] クライアントデモ",
                                     date: Calendar.current.date(byAdding: .day, value: 1, to: Date())!, // 明日
                                     meetLink: "https://meet.google.com/mock-xyz-uvw",
                                     isGoogleCalendarSchedule: true,
-                                    googleScheduleId: "mock_event_2")
+                                    googleScheduleId: "mock_schedule_2")
         let dummySchedule3 = Schedule(title: "[Mock] 終日イベント", // Meetリンクなし
                                     date: Calendar.current.startOfDay(for: Date()), // 今日の0時
                                     isGoogleCalendarSchedule: true,
-                                    googleScheduleId: "mock_event_3")
+                                    googleScheduleId: "mock_schedule_3")
 
         // 成功したと仮定してダミーデータを返す
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { // 1.5秒遅延

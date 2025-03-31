@@ -21,7 +21,7 @@ struct minimemoApp: App {
                 // .frame(width: 300, height: 400)
         }
         // スタイルを選択（.menu または .window）
-        // .menuBarExtraStyle(.window) // ポップアップウィンドウ形式
-        .menuBarExtraStyle(.menu) // 通常のメニュー形式
+        .menuBarExtraStyle(.window) // ポップアップウィンドウ形式
+        // .menuBarExtraStyle(.menu) // 通常のメニュー形式
     }
 }
