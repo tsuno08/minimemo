@@ -24,11 +24,11 @@ struct Schedule: Identifiable, Codable, Hashable {
     var notes: String?
 
     // Googleカレンダーから取得したイベントかどうかのフラグ
-    var isGoogleCalendarEvent: Bool
+    var isGoogleCalendarSchedule: Bool
 
     // 対応するGoogleカレンダーのイベントID (オプショナル)
     // Googleカレンダー上でイベントを識別するために使用可能
-    var googleEventId: String?
+    var googleScheduleId: String?
 
     // 新しいスケジュールを作成するためのイニシャライザ (例)
     init(id: UUID = UUID(), // デフォルトで新しいUUIDを生成
@@ -36,16 +36,16 @@ struct Schedule: Identifiable, Codable, Hashable {
          date: Date,
          meetLink: String? = nil, // デフォルトはnil
          notes: String? = nil,    // デフォルトはnil
-         isGoogleCalendarEvent: Bool = false, // デフォルトはfalse
-         googleEventId: String? = nil) // デフォルトはnil
+         isGoogleCalendarSchedule: Bool = false, // デフォルトはfalse
+         googleScheduleId: String? = nil) // デフォルトはnil
     {
         self.id = id
         self.title = title
         self.date = date
         self.meetLink = meetLink
         self.notes = notes
-        self.isGoogleCalendarEvent = isGoogleCalendarEvent
-        self.googleEventId = googleEventId
+        self.isGoogleCalendarSchedule = isGoogleCalendarSchedule
+        self.googleScheduleId = googleScheduleId
     }
 
     // Hashable準拠のための実装 (idが同じなら同じインスタンスとみなす)
