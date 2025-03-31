@@ -12,10 +12,10 @@ import EventKit // Apple Calendar/Reminders連携する場合 (オプション)
 
 // --- データ永続化サービスのインターフェース (例) ---
 protocol PersistenceService {
-    func loadEventItems() -> [Schedule]
-    func saveEventItems(_ items: [Schedule])
-    func loadNoteItems() -> [Note]
-    func saveNoteItems(_ items: [Note])
+    func loadSchedules() -> [Schedule]
+    func saveSchedules(_ items: [Schedule])
+    func loadNotes() -> [Note]
+    func saveNotes(_ items: [Note])
     // Google認証トークンなどの保存/読み込みも担当する可能性あり
     func loadGoogleAuthToken() -> String?
     func saveGoogleAuthToken(_ token: String?)
@@ -27,17 +27,17 @@ protocol GoogleCalendarService {
     // 認証を行い、成功したらアクセストークンを返す (非同期)
     func authenticate(completion: @escaping (Result<String, Error>) -> Void)
     // アクセストークンを使ってイベントを取得する (非同期)
-    func fetchEvents(accessToken: String, completion: @escaping (Result<[Schedule], Error>) -> Void)
+    func fetchSchedules(accessToken: String, completion: @escaping (Result<[Schedule], Error>) -> Void)
     // 必要に応じて他のメソッド（イベント追加、更新、削除など）
 }
 
 // --- アプリケーションの状態とロジックを管理するViewModel ---
-class AppState: ObservableObject {
+class AppViewModel: ObservableObject {
 
     // MARK: - Published Properties (UIに反映させたい状態)
 
-    @Published var eventItems: [Schedule] = []
-    @Published var noteItems: [Note] = []
+    @Published var schedules: [Schedule] = []
+    @Published var notes: [Note] = []
     @Published var isLoading: Bool = false // データロード中や同期中を示すフラグ
     @Published var errorMessage: String? // エラーメッセージ表示用
     @Published var isAuthenticatedWithGoogle: Bool = false // Google認証状態
@@ -75,18 +75,18 @@ class AppState: ObservableObject {
         print("データを読み込んでいます...")
 
         // 同期的に読み込む場合 (サービスの設計による)
-        self.eventItems = persistenceService.loadEventItems()
-        self.noteItems = persistenceService.loadNoteItems()
+        self.schedules = persistenceService.loadSchedules()
+        self.notes = persistenceService.loadNotes()
 
         // 読み込み後に日付順ソートなど
-        sortEventItems()
-        sortNoteItems()
+        sortSchedules()
+        sortNotes()
 
         // Meetリンクタイマーを再スケジュール
         scheduleMeetLinkOpening()
 
         isLoading = false
-        print("データの読み込み完了。 Events: \(eventItems.count), Notes: \(noteItems.count)")
+        print("データの読み込み完了。 Schedules: \(schedules.count), Notes: \(notes.count)")
 
         // 必要であれば、起動時にGoogleカレンダーと同期
         // if isAuthenticatedWithGoogle {
@@ -96,85 +96,85 @@ class AppState: ObservableObject {
 
     // 内部的にデータが変更された後に呼ぶ
     private func saveData() {
-        persistenceService.saveEventItems(eventItems)
-        persistenceService.saveNoteItems(noteItems)
+        persistenceService.saveSchedules(schedules)
+        persistenceService.saveNotes(notes)
         print("データを保存しました。")
     }
 
     // MARK: - Schedule CRUD
 
-    func addEventItem(title: String, date: Date, meetLink: String? = nil, notes: String? = nil) {
-        let newItem = Schedule(title: title, date: date, meetLink: meetLink, notes: notes)
-        eventItems.append(newItem)
-        sortEventItems()
-        scheduleMeetLinkOpening(for: newItem) // 新規アイテムのタイマー設定
+    func addSchedule(title: String, date: Date, meetLink: String? = nil, notes: String? = nil) {
+        let new = Schedule(title: title, date: date, meetLink: meetLink, notes: notes)
+        schedules.append(new)
+        sortSchedules()
+        scheduleMeetLinkOpening(for: new) // 新規アイテムのタイマー設定
         saveData()
     }
 
-    func updateEventItem(_ item: Schedule) {
-        guard let index = eventItems.firstIndex(where: { $0.id == item.id }) else { return }
-        eventItems[index] = item
-        sortEventItems()
+    func updateSchedule(_ item: Schedule) {
+        guard let index = schedules.firstIndex(where: { $0.id == item.id }) else { return }
+        schedules[index] = item
+        sortSchedules()
         // タイマーを更新する必要があるか確認
         cancelMeetLinkTimer(for: item.id)
         scheduleMeetLinkOpening(for: item)
         saveData()
     }
 
-    func deleteEventItem(at offsets: IndexSet) {
-        let idsToDelete = offsets.map { eventItems[$0].id }
+    func deleteSchedule(at offsets: IndexSet) {
+        let idsToDelete = offsets.map { schedules[$0].id }
         idsToDelete.forEach { cancelMeetLinkTimer(for: $0) } // タイマーをキャンセル
-        eventItems.remove(atOffsets: offsets)
+        schedules.remove(atOffsets: offsets)
         // Note: Googleカレンダー由来のイベント削除はGoogle API経由で行うか、
         //       単にアプリの表示から消すだけにするか仕様による。
         saveData()
     }
 
-    func deleteEventItem(_ item: Schedule) {
-        if let index = eventItems.firstIndex(where: { $0.id == item.id }) {
+    func deleteSchedule(_ item: Schedule) {
+        if let index = schedules.firstIndex(where: { $0.id == item.id }) {
             cancelMeetLinkTimer(for: item.id) // タイマーをキャンセル
-            eventItems.remove(at: index)
+            schedules.remove(at: index)
             saveData()
         }
     }
 
-    private func sortEventItems() {
-        eventItems.sort { $0.date < $1.date }
+    private func sortSchedules() {
+        schedules.sort { $0.date < $1.date }
     }
 
     // MARK: - Note CRUD
 
-    func addNoteItem(content: String) {
-        let newItem = Note(content: content)
+    func addNote(content: String) {
+        let new = Note(content: content)
         // 新しいメモを先頭に追加する場合
-        noteItems.insert(newItem, at: 0)
-        // sortNoteItems() // または作成日時/更新日時でソート
+        notes.insert(new, at: 0)
+        // sortNotes() // または作成日時/更新日時でソート
         saveData()
     }
 
-    func updateNoteItem(_ item: Note) {
-        guard let index = noteItems.firstIndex(where: { $0.id == item.id }) else { return }
-        noteItems[index] = item
-        noteItems[index].modifiedAt = Date() // 更新日時を更新
-        // sortNoteItems() // 必要ならソート
+    func updateNote(_ item: Note) {
+        guard let index = notes.firstIndex(where: { $0.id == item.id }) else { return }
+        notes[index] = item
+        notes[index].modifiedAt = Date() // 更新日時を更新
+        // sortNotes() // 必要ならソート
         saveData()
     }
 
-    func deleteNoteItem(at offsets: IndexSet) {
-        noteItems.remove(atOffsets: offsets)
+    func deleteNote(at offsets: IndexSet) {
+        notes.remove(atOffsets: offsets)
         saveData()
     }
 
-    func deleteNoteItem(_ item: Note) {
-        if let index = noteItems.firstIndex(where: { $0.id == item.id }) {
-            noteItems.remove(at: index)
+    func deleteNote(_ item: Note) {
+        if let index = notes.firstIndex(where: { $0.id == item.id }) {
+            notes.remove(at: index)
             saveData()
         }
     }
 
-    private func sortNoteItems() {
+    private func sortNotes() {
         // 例: 更新日時の降順でソート
-        noteItems.sort { $0.modifiedAt > $1.modifiedAt }
+        notes.sort { $0.modifiedAt > $1.modifiedAt }
     }
 
     // MARK: - Google Calendar Sync
@@ -216,15 +216,15 @@ class AppState: ObservableObject {
         errorMessage = nil
         print("Googleカレンダーと同期を開始します...")
 
-        googleCalendarService.fetchEvents(accessToken: accessToken) { [weak self] result in
+        googleCalendarService.fetchSchedules(accessToken: accessToken) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isLoading = false
                 switch result {
-                case .success(let googleEvents):
-                    print("Googleカレンダーから \(googleEvents.count) 件のイベントを取得しました。")
-                    self.mergeGoogleEvents(googleEvents)
-                    self.sortEventItems()
+                case .success(let googleSchedules):
+                    print("Googleカレンダーから \(googleSchedules.count) 件のイベントを取得しました。")
+                    self.mergeGoogleSchedules(googleSchedules)
+                    self.sortSchedules()
                     self.scheduleMeetLinkOpening() // 同期後タイマーを再設定
                     self.saveData()
                     print("Googleカレンダーとの同期完了。")
@@ -244,11 +244,11 @@ class AppState: ObservableObject {
     }
 
     // Googleから取得したイベントを既存のリストとマージするロジック
-    private func mergeGoogleEvents(_ googleEvents: [Schedule]) {
+    private func mergeGoogleSchedules(_ googleSchedules: [Schedule]) {
         // 既存のGoogleカレンダー由来のイベントを一旦削除
-        eventItems.removeAll { $0.isGoogleCalendarEvent }
+        schedules.removeAll { $0.isGoogleCalendarSchedule }
         // 新しいイベントを追加
-        eventItems.append(contentsOf: googleEvents)
+        schedules.append(contentsOf: googleSchedules)
         // 必要であれば、重複排除や更新ロジックをここに追加
     }
 
@@ -258,7 +258,7 @@ class AppState: ObservableObject {
         persistenceService.saveGoogleAuthToken(nil)
         isAuthenticatedWithGoogle = false
         // アプリ内のGoogleカレンダー由来のデータを削除するかどうかは仕様による
-        eventItems.removeAll { $0.isGoogleCalendarEvent }
+        schedules.removeAll { $0.isGoogleCalendarSchedule }
         saveData()
         print("Googleアカウント連携を解除しました。")
     }
@@ -268,7 +268,7 @@ class AppState: ObservableObject {
 
     // 指定したイベントのMeetリンクタイマーを設定
     private func scheduleMeetLinkOpening(for event: Schedule) {
-        guard event.isGoogleCalendarEvent, // Googleカレンダーのイベントのみ対象とする場合
+        guard event.isGoogleCalendarSchedule, // Googleカレンダーのイベントのみ対象とする場合
               let meetLink = event.meetLink,
               !meetLink.isEmpty,
               event.date > Date() // 開始時刻が未来のイベントのみ
@@ -299,7 +299,7 @@ class AppState: ObservableObject {
     func scheduleMeetLinkOpening() {
         cancelAllMeetLinkTimers() // 既存のタイマーを全てキャンセル
         print("既存のMeetリンクタイマーをキャンセルし、再スケジュールします。")
-        for event in eventItems {
+        for event in schedules {
             scheduleMeetLinkOpening(for: event)
         }
     }
@@ -328,8 +328,8 @@ class AppState: ObservableObject {
         cancelAllMeetLinkTimers()
 
         // メモリ上のデータをクリア
-        eventItems = []
-        noteItems = []
+        schedules = []
+        notes = []
 
         // 永続化データをクリア (認証情報もクリアするかは仕様による)
         persistenceService.clearAllData()
@@ -385,25 +385,25 @@ class AppState: ObservableObject {
 
 // UserDefaultsを使った簡単な永続化サービスの例
 class UserDefaultsPersistenceService: PersistenceService {
-    private let eventItemsKey = "eventItemsData"
-    private let noteItemsKey = "noteItemsData"
+    private let eventsKey = "eventsData"
+    private let notesKey = "notesData"
     private let googleTokenKey = "googleAuthToken"
 
-    func loadEventItems() -> [Schedule] {
-        guard let data = UserDefaults.standard.data(forKey: eventItemsKey),
+    func loadSchedules() -> [Schedule] {
+        guard let data = UserDefaults.standard.data(forKey: eventsKey),
               let items = try? JSONDecoder().decode([Schedule].self, from: data) else {
             return []
         }
         return items
     }
-    func saveEventItems(_ items: [Schedule]) {
+    func saveSchedules(_ items: [Schedule]) {
         if let data = try? JSONEncoder().encode(items) {
-            UserDefaults.standard.set(data, forKey: eventItemsKey)
+            UserDefaults.standard.set(data, forKey: eventsKey)
         }
     }
-    // loadNoteItems, saveNoteItems も同様に実装...
-    func loadNoteItems() -> [Note] { /* ... */ return [] }
-    func saveNoteItems(_ items: [Note]) { /* ... */ }
+    // loadNotes, saveNotes も同様に実装...
+    func loadNotes() -> [Note] { /* ... */ return [] }
+    func saveNotes(_ items: [Note]) { /* ... */ }
 
     func loadGoogleAuthToken() -> String? {
         return UserDefaults.standard.string(forKey: googleTokenKey)
@@ -412,8 +412,8 @@ class UserDefaultsPersistenceService: PersistenceService {
         UserDefaults.standard.set(token, forKey: googleTokenKey)
     }
     func clearAllData() {
-        UserDefaults.standard.removeObject(forKey: eventItemsKey)
-        UserDefaults.standard.removeObject(forKey: noteItemsKey)
+        UserDefaults.standard.removeObject(forKey: eventsKey)
+        UserDefaults.standard.removeObject(forKey: notesKey)
         // トークンも消す場合
         UserDefaults.standard.removeObject(forKey: googleTokenKey)
     }
@@ -432,27 +432,27 @@ class MockGoogleCalendarService: GoogleCalendarService {
         // completion(.failure(MockError.authenticationFailed))
     }
 
-    func fetchEvents(accessToken: String, completion: @escaping (Result<[Schedule], Error>) -> Void) {
-        print("MockGoogle: fetchEvents called with token: \(accessToken)")
+    func fetchSchedules(accessToken: String, completion: @escaping (Result<[Schedule], Error>) -> Void) {
+        print("MockGoogle: fetchSchedules called with token: \(accessToken)")
         // ダミーのイベントデータを作成
-        let dummyEvent1 = Schedule(title: "[Mock] チームミーティング",
+        let dummySchedule1 = Schedule(title: "[Mock] チームミーティング",
                                     date: Calendar.current.date(byAdding: .hour, value: 1, to: Date())!, // 1時間後
                                     meetLink: "https://meet.google.com/mock-abc-def",
-                                    isGoogleCalendarEvent: true,
-                                    googleEventId: "mock_event_1")
-        let dummyEvent2 = Schedule(title: "[Mock] クライアントデモ",
+                                    isGoogleCalendarSchedule: true,
+                                    googleScheduleId: "mock_event_1")
+        let dummySchedule2 = Schedule(title: "[Mock] クライアントデモ",
                                     date: Calendar.current.date(byAdding: .day, value: 1, to: Date())!, // 明日
                                     meetLink: "https://meet.google.com/mock-xyz-uvw",
-                                    isGoogleCalendarEvent: true,
-                                    googleEventId: "mock_event_2")
-        let dummyEvent3 = Schedule(title: "[Mock] 終日イベント", // Meetリンクなし
+                                    isGoogleCalendarSchedule: true,
+                                    googleScheduleId: "mock_event_2")
+        let dummySchedule3 = Schedule(title: "[Mock] 終日イベント", // Meetリンクなし
                                     date: Calendar.current.startOfDay(for: Date()), // 今日の0時
-                                    isGoogleCalendarEvent: true,
-                                    googleEventId: "mock_event_3")
+                                    isGoogleCalendarSchedule: true,
+                                    googleScheduleId: "mock_event_3")
 
         // 成功したと仮定してダミーデータを返す
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { // 1.5秒遅延
-            completion(.success([dummyEvent1, dummyEvent2, dummyEvent3]))
+            completion(.success([dummySchedule1, dummySchedule2, dummySchedule3]))
         }
         // 失敗をシミュレートする場合
         // enum MockError: Error { case fetchFailed }
