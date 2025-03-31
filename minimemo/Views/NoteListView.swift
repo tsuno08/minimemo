@@ -16,17 +16,32 @@ struct NoteListView: View {
             // 新規メモ入力部分
             HStack {
                 TextField("新規メモ", text: $newNoteContent)
-                Button("追加") {
+                    .textFieldStyle(.roundedBorder)
+                
+                Button(action: {
                     viewModel.addNote(content: newNoteContent)
                     newNoteContent = ""
+                }) {
+                    Image(systemName: "plus.circle.fill")
                 }
                 .disabled(newNoteContent.isEmpty)
             }
+            .padding(.horizontal)
             
             // メモ一覧
             List {
                 ForEach(viewModel.notes) { note in
-                    Text(note.content)
+                    HStack {
+                        Text(note.content)
+                        Spacer()
+                        Button(action: {
+                            viewModel.deleteNote(note)
+                        }) {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.borderless)
+                    }
                 }
                 .onDelete { indices in
                     indices.forEach { index in

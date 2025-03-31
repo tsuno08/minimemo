@@ -17,21 +17,34 @@ struct ScheduleListView: View {
             // 新規スケジュール入力部分
             HStack {
                 TextField("新規スケジュール", text: $newScheduleTitle)
+                    .textFieldStyle(.roundedBorder)
+                
                 DatePicker("", selection: $selectedDate)
-                Button("追加") {
+                    .labelsHidden()
+                
+                Button(action: {
                     viewModel.addSchedule(title: newScheduleTitle, date: selectedDate)
                     newScheduleTitle = ""
+                }) {
+                    Image(systemName: "plus.circle.fill")
                 }
                 .disabled(newScheduleTitle.isEmpty)
             }
+            .padding(.horizontal)
             
             // スケジュール一覧
             List {
                 ForEach(viewModel.schedules) { schedule in
                     HStack {
-                        Text(schedule.title)
+                        VStack(alignment: .leading) {
+                            Text(schedule.title)
+                            Text(schedule.date.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
                         Spacer()
-                        Text(schedule.date, style: .date)
+                        
                         if let meetLink = schedule.meetLink {
                             Button("Meet") {
                                 if let url = URL(string: meetLink) {
@@ -40,6 +53,14 @@ struct ScheduleListView: View {
                             }
                             .buttonStyle(.link)
                         }
+                        
+                        Button(action: {
+                            viewModel.deleteSchedule(schedule)
+                        }) {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.borderless)
                     }
                 }
                 .onDelete { indices in
@@ -48,7 +69,7 @@ struct ScheduleListView: View {
                     }
                 }
             }
-            .frame(height: 150)
+            .frame(height: 200)
         }
     }
 }
