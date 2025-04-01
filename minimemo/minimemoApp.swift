@@ -13,15 +13,10 @@ struct minimemoApp: App {
     @StateObject private var appViewModel = AppViewModel()
 
     var body: some Scene {
-        // MenuBarExtraを定義
         MenuBarExtra("アプリ名", systemImage: "calendar.badge.clock") { // アイコンは適宜変更
             ContentView()
                 .environmentObject(appViewModel) // ContentViewにAppStateを渡す
-                // MenuBarExtraのウィンドウサイズを指定する場合
-                // .frame(width: 300, height: 400)
         }
-        // スタイルを選択（.menu または .window）
         .menuBarExtraStyle(.window) // ポップアップウィンドウ形式
-        // .menuBarExtraStyle(.menu) // 通常のメニュー形式
     }
 }

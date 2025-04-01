@@ -11,6 +11,7 @@ struct ScheduleListView: View {
     @EnvironmentObject var viewModel: AppViewModel
     @State private var newScheduleTitle: String = ""
     @State private var selectedTime: Date = Date()  // 日付ではなく時間のみ
+    @State private var newScheduleMeetLink: String = "" // Meetリンク用のStateを追加
 
     // 共通のスケジュール追加処理を関数化
     private func addSchedule() {
@@ -21,8 +22,9 @@ struct ScheduleListView: View {
         components.minute = timeComponents.minute
 
         let combinedDate = calendar.date(from: components)!
-        viewModel.addSchedule(title: newScheduleTitle, date: combinedDate)
+        viewModel.addSchedule(title: newScheduleTitle, date: combinedDate, meetLink: newScheduleMeetLink)
         newScheduleTitle = ""
+        newScheduleMeetLink = "" // Meetリンクをリセット
     }
 
     var body: some View {
@@ -30,6 +32,12 @@ struct ScheduleListView: View {
             // 新規スケジュール入力部分
             HStack(spacing: 8) {
                 TextField("新規スケジュール", text: $newScheduleTitle)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        addSchedule()
+                    }
+
+                TextField("Meetリンク (任意)", text: $newScheduleMeetLink) // Meetリンク入力フィールドを追加
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
                         addSchedule()
@@ -69,7 +77,7 @@ struct ScheduleListView: View {
                         }
                         Spacer()
 
-                        if let meetLink = schedule.meetLink {
+                        if let meetLink = schedule.meetLink, !meetLink.isEmpty {
                             Button("Meet") {
                                 if let url = URL(string: meetLink) {
                                     NSWorkspace.shared.open(url)
