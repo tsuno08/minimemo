@@ -247,8 +247,7 @@ class AppViewModel: ObservableObject {
 
     // 指定したイベントのMeetリンクタイマーを設定
     private func scheduleMeetLinkOpening(for schedule: Schedule) {
-        guard schedule.isGoogleCalendarSchedule,  // Googleカレンダーのイベントのみ対象とする場合
-            let meetLink = schedule.meetLink,
+        guard let meetLink = schedule.meetLink,
             !meetLink.isEmpty,
             schedule.date > Date()  // 開始時刻が未来のイベントのみ
         else {
