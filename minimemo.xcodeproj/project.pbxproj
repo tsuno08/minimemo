@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		47473DC72D9C2E6B003D1F01 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 47473DC62D9C2E6B003D1F01 /* GoogleSignIn */; };
 		47473DC92D9C2E6B003D1F01 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 47473DC82D9C2E6B003D1F01 /* GoogleSignInSwift */; };
+		47473DCB2D9C9E64003D1F01 /* Development.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 47473DCA2D9C9E64003D1F01 /* Development.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		471EC1CC2D9ACC9600CB0254 /* minimemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = minimemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		471EC1DD2D9ACC9800CB0254 /* minimemoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = minimemoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		471EC1E72D9ACC9800CB0254 /* minimemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = minimemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		47473DCA2D9C9E64003D1F01 /* Development.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Development.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -95,6 +97,7 @@
 		471EC1C32D9ACC9600CB0254 = {
 			isa = PBXGroup;
 			children = (
+				47473DCA2D9C9E64003D1F01 /* Development.xcconfig */,
 				471EC1CE2D9ACC9600CB0254 /* minimemo */,
 				471EC1E02D9ACC9800CB0254 /* minimemoTests */,
 				471EC1EA2D9ACC9800CB0254 /* minimemoUITests */,
@@ -237,6 +240,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				47473DCB2D9C9E64003D1F01 /* Development.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
