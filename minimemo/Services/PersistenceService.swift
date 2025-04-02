@@ -7,7 +7,7 @@
 
 import Foundation
 
-protocol PersistenceService {
+protocol PersistenceServiceProtocol {
     func loadSchedules() -> [Schedule]
     func saveSchedules(_ items: [Schedule])
     func loadNotes() -> [Note]
@@ -19,7 +19,7 @@ protocol PersistenceService {
 }
 
 // UserDefaultsを使用したデータ永続化サービスの実装
-class UserDefaultsPersistenceService: PersistenceService {
+class PersistenceService: PersistenceServiceProtocol {
     private let schedulesKey = "schedulesKey"
     private let notesKey = "notesKey"
     private let googleAuthTokenKey = "googleAuthTokenKey"
