@@ -9,16 +9,15 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>GIDClientID</key>
-	<string>$(OAUTH_CLIENT_ID)</string>
+	<string>${OAUTH_CLIENT_ID}</string>
 	<key>CFBundleURLTypes</key>
 	<array>
-	<dict>
-		<key>CFBundleURLSchemes</key>
-		<array>
-		<string>$(OAUTH_URL_SCHEME)</string>
-		</array>
-	</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>${OAUTH_URL_SCHEME}</string>
+			</array>
+		</dict>
 	</array>
-
 </dict>
 </plist>
