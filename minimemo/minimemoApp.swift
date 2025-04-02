@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import GoogleSignIn
 
 @main
 struct minimemoApp: App {
@@ -16,6 +17,14 @@ struct minimemoApp: App {
         MenuBarExtra("アプリ名", systemImage: "calendar.badge.clock") { // アイコンは適宜変更
             ContentView()
                 .environmentObject(appViewModel) // ContentViewにAppStateを渡す
+                .onOpenURL { url in
+                          GIDSignIn.sharedInstance.handle(url)
+                        }
+                .onAppear {
+                  GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
+                    // Check if `user` exists; otherwise, do something with `error`
+                  }
+                }
         }
         .menuBarExtraStyle(.window) // ポップアップウィンドウ形式
     }
