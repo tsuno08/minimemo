@@ -6,58 +6,135 @@
 //
 
 import Foundation
+import GoogleAPIClientForREST_Calendar
+import GoogleSignIn
 
-// --- Googleカレンダーサービスのインターフェース (例) ---
-protocol GoogleCalendarService {
-    // 認証を行い、成功したらアクセストークンを返す (非同期)
-    func authenticate(completion: @escaping (Result<String, Error>) -> Void)
-    // アクセストークンを使ってイベントを取得する (非同期)
-    func fetchSchedules(
-        accessToken: String, completion: @escaping (Result<[Schedule], Error>) -> Void)
-    // 必要に応じて他のメソッド（イベント追加、更新、削除など）
+// --- Custom Error Type ---
+enum GoogleCalendarServiceError: Error, LocalizedError {
+    case notSignedIn
+    case apiError(Error)
+    case unexpectedResultType
+    case eventMappingError(String) // More specific errors can be added
+
+    var errorDescription: String? {
+        switch self {
+        case .notSignedIn:
+            return "Googleアカウントにサインインしていません。"
+        case .apiError(let error):
+            // You might want to inspect the underlying error (e.g., NSError domain/code)
+            return "Google Calendar APIエラーが発生しました: \(error.localizedDescription)"
+        case .unexpectedResultType:
+            return "APIから予期しないタイプの応答がありました。"
+        case .eventMappingError(let reason):
+            return "イベントデータの変換に失敗しました: \(reason)"
+        }
+    }
 }
 
-class MockGoogleCalendarService: GoogleCalendarService {
-    func authenticate(completion: @escaping (Result<String, Error>) -> Void) {
-        print("MockGoogle: authenticate called")
-        // 成功したと仮定してダミートークンを返す
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {  // 1秒遅延
-            completion(.success("dummy-access-token"))
+
+// --- Googleカレンダーサービスのインターフェース ---
+protocol GoogleCalendarServiceProtocol {
+    /// Googleカレンダーからイベント（スケジュール）を取得します。
+    /// - Throws: GoogleCalendarServiceError
+    /// - Returns: アプリ内モデル (`Schedule`) の配列
+    func fetchSchedules() async throws -> [Schedule] // Add return type and throws
+}
+
+class GoogleCalendarService: GoogleCalendarServiceProtocol { // クラス名を Impl に変更推奨
+
+    private let service = GTLRCalendarService()
+
+    func fetchSchedules() async throws -> [Schedule] {
+        guard let user = GIDSignIn.sharedInstance.currentUser else {
+             print("[GoogleCalendarService] Error: Not signed in.")
+            throw GoogleCalendarServiceError.notSignedIn
         }
-        // 失敗をシミュレートする場合
-        // enum MockError: Error { case authenticationFailed }
-        // completion(.failure(MockError.authenticationFailed))
+        // 毎回Authorizerを設定するのが安全
+        service.authorizer = user.fetcherAuthorizer
+
+        let query = GTLRCalendarQuery_EventsList.query(withCalendarId: "primary")
+        let calendar = Calendar.current
+        let now = Date()
+        guard let oneDayAgo = calendar.date(byAdding: .day, value: -1, to: now),
+              let sevenDaysLater = calendar.date(byAdding: .day, value: 7, to: now) else {
+            // このエラーは通常発生しないはず
+            fatalError("Failed to calculate date range.")
+        }
+        query.timeMin = GTLRDateTime(date: oneDayAgo)
+        query.timeMax = GTLRDateTime(date: sevenDaysLater)
+        query.orderBy = kGTLRCalendarOrderByStartTime
+        query.singleEvents = true
+
+        print("[GoogleCalendarService] Fetching events...")
+
+        // --- API呼び出し (修正されたヘルパー関数を使用) ---
+        let eventsList: GTLRCalendar_Events // 期待する具体的なレスポンス型
+        do {
+             // executeQueryAsync に期待するレスポンス型 GTLRCalendar_Events を渡す
+             eventsList = try await executeQueryAsync(query: query, responseType: GTLRCalendar_Events.self)
+             print("[GoogleCalendarService] Successfully fetched event list.")
+        } catch {
+             print("[GoogleCalendarService] API execution failed: \(error)")
+             // エラーの種類に応じて処理を変えることも可能
+            throw GoogleCalendarServiceError.apiError(error)
+        }
+
+        // --- 結果のマッピング ---
+        guard let items = eventsList.items else {
+            print("[GoogleCalendarService] No events found in the response.")
+            return [] // イベントがない場合は空配列を返す
+        }
+        print("[GoogleCalendarService] Mapping \(items.count) Google events...")
+        let schedules = items.compactMap { mapGoogleEventToSchedule($0) }
+        print("[GoogleCalendarService] Successfully mapped \(schedules.count) events.")
+        return schedules
     }
 
-    func fetchSchedules(
-        accessToken: String, completion: @escaping (Result<[Schedule], Error>) -> Void
-    ) {
-        print("MockGoogle: fetchSchedules called with token: \(accessToken)")
-        // ダミーのイベントデータを作成
-        let dummySchedule1 = Schedule(
-            title: "[Mock] チームミーティング",
-            date: Calendar.current.date(byAdding: .hour, value: 1, to: Date())!,  // 1時間後
-            meetLink: "https://meet.google.com/mock-abc-def",
-            isGoogleCalendarSchedule: true,
-            googleScheduleId: "mock_schedule_1")
-        let dummySchedule2 = Schedule(
-            title: "[Mock] クライアントデモ",
-            date: Calendar.current.date(byAdding: .day, value: 1, to: Date())!,  // 明日
-            meetLink: "https://meet.google.com/mock-xyz-uvw",
-            isGoogleCalendarSchedule: true,
-            googleScheduleId: "mock_schedule_2")
-        let dummySchedule3 = Schedule(
-            title: "[Mock] 終日イベント",  // Meetリンクなし
-            date: Calendar.current.startOfDay(for: Date()),  // 今日の0時
-            isGoogleCalendarSchedule: true,
-            googleScheduleId: "mock_schedule_3")
+    // --- 修正された executeQueryAsync ヘルパー関数 ---
+    // ジェネリックパラメータ ResponseType を追加し、期待するレスポンス型を受け取る
+    private func executeQueryAsync<QueryType: GTLRQueryProtocol, ResponseType: GTLRObject>(
+        query: QueryType,
+        responseType: ResponseType.Type // .Type として型情報を受け取る
+    ) async throws -> ResponseType {
+         try await withCheckedThrowingContinuation { continuation in
+             service.executeQuery(query) { (ticket: GTLRServiceTicket, result: Any?, error: Error?) in
+                 if let error = error {
+                     // APIからエラーが返された場合
+                     continuation.resume(throwing: error)
+                 } else if let expectedResult = result as? ResponseType {
+                     // 結果が期待した型にキャストできた場合
+                     continuation.resume(returning: expectedResult)
+                 } else {
+                     // エラーがなく、結果も期待した型でない（またはnilの）場合
+                     print("[GoogleCalendarService] executeQueryAsync: Unexpected result type or nil result. Expected \(ResponseType.self), got \(String(describing: type(of: result)))")
+                     continuation.resume(throwing: GoogleCalendarServiceError.unexpectedResultType)
+                 }
+             }
+         }
+     }
 
-        // 成功したと仮定してダミーデータを返す
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {  // 1.5秒遅延
-            completion(.success([dummySchedule1, dummySchedule2, dummySchedule3]))
+    // --- mapGoogleEventToSchedule ヘルパー関数 (変更なし) ---
+    private func mapGoogleEventToSchedule(_ googleEvent: GTLRCalendar_Event) -> Schedule? {
+        guard let googleId = googleEvent.identifier,
+              let summary = googleEvent.summary, !summary.isEmpty
+        else {
+            // print("[GoogleCalendarService] Skipping event mapping: Missing ID or summary...")
+            return nil
         }
-        // 失敗をシミュレートする場合
-        // enum MockError: Error { case fetchFailed }
-        // completion(.failure(MockError.fetchFailed))
+        let startDateTime = googleEvent.start?.dateTime?.date
+        let startDate = googleEvent.start?.date?.date
+        let eventDate = startDateTime ?? startDate
+        guard let date = eventDate else {
+            // print("[GoogleCalendarService] Skipping event mapping: Missing valid start date...")
+            return nil
+        }
+        return Schedule(
+            title: summary,
+            date: date,
+            meetLink: googleEvent.hangoutLink,
+            notes: googleEvent.descriptionProperty,
+            isGoogleCalendarSchedule: true,
+            googleScheduleId: googleId
+        )
     }
 }

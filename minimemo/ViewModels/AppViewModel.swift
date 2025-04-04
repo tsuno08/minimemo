@@ -34,14 +34,17 @@ class AppViewModel: ObservableObject {
     // MARK: - Initialization
 
     init(
-        persistenceService: PersistenceService = UserDefaultsPersistenceService(),  // デフォルト実装を指定
-        googleCalendarService: GoogleCalendarService = MockGoogleCalendarService()  // デフォルト実装を指定 (最初はモックでも良い)
+        persistenceService: PersistenceService =
+            PersistenceService(),  // デフォルト実装を指定
+        googleCalendarService: GoogleCalendarService =
+            GoogleCalendarService()  // デフォルト実装を指定 (最初はモックでも良い)
     ) {
         self.persistenceService = persistenceService
         self.googleCalendarService = googleCalendarService
 
         // 認証状態を永続化データから復元
-        self.isAuthenticatedWithGoogle = persistenceService.loadGoogleAuthToken() != nil
+        self.isAuthenticatedWithGoogle =
+            persistenceService.loadGoogleAuthToken() != nil
 
         loadData()  // アプリ起動時にデータを読み込む
     }
@@ -65,7 +68,8 @@ class AppViewModel: ObservableObject {
         scheduleMeetLinkOpening()
 
         isLoading = false
-        print("データの読み込み完了。 Schedules: \(schedules.count), Notes: \(notes.count)")
+        print(
+            "データの読み込み完了。 Schedules: \(schedules.count), Notes: \(notes.count)")
 
         // 必要であれば、起動時にGoogleカレンダーと同期
         // if isAuthenticatedWithGoogle {
@@ -82,8 +86,11 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Schedule CRUD
 
-    func addSchedule(title: String, date: Date, meetLink: String? = nil, notes: String? = nil) {
-        let new = Schedule(title: title, date: date, meetLink: meetLink, notes: notes)
+    func addSchedule(
+        title: String, date: Date, meetLink: String? = nil, notes: String? = nil
+    ) {
+        let new = Schedule(
+            title: title, date: date, meetLink: meetLink, notes: notes)
         schedules.append(new)
         sortSchedules()
         scheduleMeetLinkOpening(for: new)  // 新規アイテムのタイマー設定
@@ -91,7 +98,8 @@ class AppViewModel: ObservableObject {
     }
 
     func updateSchedule(_ item: Schedule) {
-        guard let index = schedules.firstIndex(where: { $0.id == item.id }) else { return }
+        guard let index = schedules.firstIndex(where: { $0.id == item.id })
+        else { return }
         schedules[index] = item
         sortSchedules()
         // タイマーを更新する必要があるか確認
@@ -132,7 +140,9 @@ class AppViewModel: ObservableObject {
     }
 
     func updateNote(_ item: Note) {
-        guard let index = notes.firstIndex(where: { $0.id == item.id }) else { return }
+        guard let index = notes.firstIndex(where: { $0.id == item.id }) else {
+            return
+        }
         notes[index] = item
         notes[index].modifiedAt = Date()  // 更新日時を更新
         // sortNotes() // 必要ならソート
@@ -158,36 +168,9 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Google Calendar Sync
 
-    func authenticateWithGoogle() {
-        isLoading = true
-        errorMessage = nil
-        print("Google認証を開始します...")
-        googleCalendarService.authenticate { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoading = false
-                switch result {
-                case .success(let accessToken):
-                    print("Google認証成功。")
-                    self.isAuthenticatedWithGoogle = true
-                    self.persistenceService.saveGoogleAuthToken(accessToken)  // トークンを保存
-                    // 認証後すぐに同期を実行
-                    self.syncGoogleCalendar()
-                case .failure(let error):
-                    print("Google認証エラー: \(error.localizedDescription)")
-                    self.errorMessage = "Google認証に失敗しました: \(error.localizedDescription)"
-                    self.isAuthenticatedWithGoogle = false
-                    self.persistenceService.saveGoogleAuthToken(nil)  // 失敗したらトークン削除
-                }
-            }
-        }
-    }
-
-    func syncGoogleCalendar() {
-        guard let accessToken = persistenceService.loadGoogleAuthToken() else {
+    func syncGoogleCalendar() async {
+        guard persistenceService.loadGoogleAuthToken() != nil else {
             print("Googleアクセストークンが見つかりません。認証が必要です。")
-            self.errorMessage = "Googleにログインしてください。"
-            self.isAuthenticatedWithGoogle = false
             return
         }
 
@@ -195,31 +178,20 @@ class AppViewModel: ObservableObject {
         errorMessage = nil
         print("Googleカレンダーと同期を開始します...")
 
-        googleCalendarService.fetchSchedules(accessToken: accessToken) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoading = false
-                switch result {
-                case .success(let googleSchedules):
-                    print("Googleカレンダーから \(googleSchedules.count) 件のイベントを取得しました。")
-                    self.mergeGoogleSchedules(googleSchedules)
-                    self.sortSchedules()
-                    self.scheduleMeetLinkOpening()  // 同期後タイマーを再設定
-                    self.saveData()
-                    print("Googleカレンダーとの同期完了。")
-                case .failure(let error):
-                    print("Googleカレンダー同期エラー: \(error.localizedDescription)")
-                    // トークン期限切れなどの可能性もあるため、再認証を促すなどの処理が必要
-                    if /* error is AuthenticationError */
-                    true {  // 仮の判定
-                        self.errorMessage = "Googleの認証情報が無効です。再ログインしてください。"
-                        self.isAuthenticatedWithGoogle = false
-                        self.persistenceService.saveGoogleAuthToken(nil)
-                    } else {
-                        self.errorMessage = "Googleカレンダーの同期に失敗しました。"
-                    }
-                }
-            }
+        do {
+            let googleSchedules =
+                try await googleCalendarService.fetchSchedules()
+            self.isLoading = false
+            print("Googleカレンダーから \(googleSchedules.count) 件のイベントを取得しました。")
+            self.mergeGoogleSchedules(googleSchedules)
+            self.sortSchedules()
+            self.scheduleMeetLinkOpening()  // 同期後タイマーを再設定
+            self.saveData()
+            print("Googleカレンダーとの同期完了。")
+
+        } catch {
+            // エラーハンドリング
+            print("スケジュールの取得に失敗しました: \(error)")
         }
     }
 
@@ -255,12 +227,16 @@ class AppViewModel: ObservableObject {
         }
 
         let timeInterval = schedule.date.timeIntervalSinceNow
-        print("Meetリンクタイマー設定: \(schedule.title) (\(schedule.id)) - \(timeInterval)秒後")
+        print(
+            "Meetリンクタイマー設定: \(schedule.title) (\(schedule.id)) - \(timeInterval)秒後"
+        )
 
         // 既存のタイマーがあればキャンセル
         cancelMeetLinkTimer(for: schedule.id)
 
-        let timer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) {
+        let timer = Timer.scheduledTimer(
+            withTimeInterval: timeInterval, repeats: false
+        ) {
             [weak self] _ in
             print("時間です: \(schedule.title) - Meetリンクを開きます: \(meetLink)")
             if let url = URL(string: meetLink) {
@@ -333,7 +309,8 @@ class AppViewModel: ObservableObject {
         content.sound = .default
 
         // トリガーは即時通知
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(
             identifier: UUID().uuidString, content: content, trigger: trigger)
 
@@ -345,7 +322,9 @@ class AppViewModel: ObservableObject {
     }
 
     func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
+        UNUserNotificationCenter.current().requestAuthorization(options: [
+            .alert, .sound, .badge,
+        ]) {
             granted, error in
             if granted {
                 print("通知許可が得られました。")

@@ -29,10 +29,11 @@ struct ContentView: View {
             ]
         ) { signInResult, error in
             guard let result = signInResult else {
-                // Inspect error
+                print("Google Sign-in failed with error: \(String(describing: error?.localizedDescription))")
                 return
             }
-            // If sign in succeeded, display the app's main content View.
+            PersistenceService().saveGoogleAuthToken(result.user.accessToken.tokenString)
+            print("Google Sign-in succeeded with user: \(result.user.accessToken.tokenString)")
         }
     }
 
@@ -53,7 +54,9 @@ struct ContentView: View {
 
             HStack {
                 Button("Googleカレンダーと同期") {
-                    viewModel.syncGoogleCalendar()
+                    Task {
+                        await viewModel.syncGoogleCalendar()
+                    }
                 }
 
                 Spacer()
