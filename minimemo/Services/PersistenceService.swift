@@ -15,7 +15,7 @@ protocol PersistenceServiceProtocol {
     // Google認証トークンなどの保存/読み込みも担当する可能性あり
     func loadGoogleAuthToken() -> String?
     func saveGoogleAuthToken(_ token: String?)
-    func clearAllData()  // リセット用
+    func clear()  // リセット用
 }
 
 // UserDefaultsを使用したデータ永続化サービスの実装
@@ -72,9 +72,8 @@ class PersistenceService: PersistenceServiceProtocol {
         UserDefaults.standard.set(token, forKey: googleAuthTokenKey)
     }
 
-    func clearAllData() {
+    func clear() {
         UserDefaults.standard.removeObject(forKey: schedulesKey)
         UserDefaults.standard.removeObject(forKey: notesKey)
-        UserDefaults.standard.removeObject(forKey: googleAuthTokenKey)
     }
 }

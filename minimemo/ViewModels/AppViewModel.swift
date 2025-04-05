@@ -301,16 +301,13 @@ class AppViewModel: ObservableObject {
         schedules = []
         notes = []
 
-        // 永続化データをクリア (認証情報もクリアするかは仕様による)
-        persistenceService.clearAllData()
-        // persistenceService.saveGoogleAuthToken(nil) // 認証情報もクリアする場合
-        // self.isAuthenticatedWithGoogle = false
+        // 永続化データをクリア
+        persistenceService.clear()
 
         errorMessage = nil
         isLoading = false
 
         print("データのリセット完了。")
-        // 必要であれば、UIにリセット完了を通知
     }
 
     // MARK: - Notifications (Optional)
