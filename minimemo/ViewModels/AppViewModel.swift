@@ -87,13 +87,15 @@ class AppViewModel: ObservableObject {
     // MARK: - Schedule CRUD
 
     func addSchedule(
-        title: String, date: Date, meetLink: String? = nil, notes: String? = nil
+        title: String, date: Date? = nil, meetLink: String? = nil, notes: String? = nil
     ) {
         let new = Schedule(
             title: title, date: date, meetLink: meetLink, notes: notes)
         schedules.append(new)
         sortSchedules()
-        scheduleMeetLinkOpening(for: new)  // 新規アイテムのタイマー設定
+        if date != nil {  // 日時が設定されている場合のみMeetリンクタイマーを設定
+            scheduleMeetLinkOpening(for: new)
+        }
         saveData()
     }
 
@@ -126,7 +128,19 @@ class AppViewModel: ObservableObject {
     }
 
     private func sortSchedules() {
-        schedules.sort { $0.date < $1.date }
+        // 日時のないスケジュールは後ろに配置
+        schedules.sort { a, b in
+            switch (a.date, b.date) {
+            case (nil, nil):
+                return false  // 両方とも日時なしの場合は順序を変えない
+            case (nil, _):
+                return false  // aが日時なしの場合は後ろに
+            case (_, nil):
+                return true   // bが日時なしの場合はaを前に
+            case (let dateA?, let dateB?):
+                return dateA < dateB  // 両方日時ありの場合は日時で比較
+            }
+        }
     }
 
     // MARK: - Note CRUD
@@ -221,12 +235,13 @@ class AppViewModel: ObservableObject {
     private func scheduleMeetLinkOpening(for schedule: Schedule) {
         guard let meetLink = schedule.meetLink,
             !meetLink.isEmpty,
-            schedule.date > Date()  // 開始時刻が未来のイベントのみ
+            let date = schedule.date,  // 日時が設定されている場合のみ
+            date > Date()  // 開始時刻が未来のイベントのみ
         else {
             return
         }
 
-        let timeInterval = schedule.date.timeIntervalSinceNow
+        let timeInterval = date.timeIntervalSinceNow
         print(
             "Meetリンクタイマー設定: \(schedule.title) (\(schedule.id)) - \(timeInterval)秒後"
         )

@@ -10,26 +10,34 @@ import SwiftUI
 struct ScheduleListView: View {
     @EnvironmentObject var viewModel: AppViewModel
     @State private var newScheduleTitle: String = ""
-    @State private var selectedTime: Date = Date()  // 日付ではなく時間のみ
-    @State private var newScheduleMeetLink: String = "" // Meetリンク用のStateを追加
+    @State private var selectedTime: Date? = nil  // オプショナルに変更
+    @State private var newScheduleMeetLink: String = ""
+    @State private var showDatePicker: Bool = false  // DatePicker表示制御用
 
-    // 共通のスケジュール追加処理を関数化
     private func addSchedule() {
-        let calendar = Calendar.current
-        var components = calendar.dateComponents([.year, .month, .day], from: Date())
-        let timeComponents = calendar.dateComponents([.hour, .minute], from: selectedTime)
-        components.hour = timeComponents.hour
-        components.minute = timeComponents.minute
+        guard !newScheduleTitle.isEmpty else { return }
+        
+        let combinedDate: Date?
+        if let selectedTime = selectedTime {
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: Date())
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: selectedTime)
+            components.hour = timeComponents.hour
+            components.minute = timeComponents.minute
+            combinedDate = calendar.date(from: components)
+        } else {
+            combinedDate = nil
+        }
 
-        let combinedDate = calendar.date(from: components)!
         viewModel.addSchedule(title: newScheduleTitle, date: combinedDate, meetLink: newScheduleMeetLink)
         newScheduleTitle = ""
-        newScheduleMeetLink = "" // Meetリンクをリセット
+        newScheduleMeetLink = ""
+        selectedTime = nil
+        showDatePicker = false
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 新規スケジュール入力部分
             HStack(spacing: 8) {
                 TextField("新規スケジュール", text: $newScheduleTitle)
                     .textFieldStyle(.roundedBorder)
@@ -37,17 +45,36 @@ struct ScheduleListView: View {
                         addSchedule()
                     }
 
-                TextField("Meetリンク (任意)", text: $newScheduleMeetLink) // Meetリンク入力フィールドを追加
+                TextField("Meetリンク (任意)", text: $newScheduleMeetLink)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
                         addSchedule()
                     }
 
-                // 時間のみのDatePicker
-                DatePicker("", selection: $selectedTime, displayedComponents: .hourAndMinute)
+                // 日時選択のトグルボタン
+                Button(action: {
+                    if !showDatePicker {
+                        selectedTime = Date()
+                    }
+                    showDatePicker.toggle()
+                }) {
+                    Image(systemName: showDatePicker ? "clock.fill" : "clock")
+                }
+                .buttonStyle(.borderless)
+
+                // 日時選択が有効な場合のみDatePickerを表示
+                if showDatePicker {
+                    DatePicker("",
+                        selection: Binding(
+                            get: { selectedTime ?? Date() },
+                            set: { selectedTime = $0 }
+                        ),
+                        displayedComponents: .hourAndMinute
+                    )
                     .labelsHidden()
                     .frame(width: 100)
-                    .padding(.horizontal, -20)  // 余白を調整（負のパディング）
+                    .padding(.horizontal, -20)
+                }
 
                 Button(action: {
                     addSchedule()
@@ -65,15 +92,16 @@ struct ScheduleListView: View {
                 .disabled(newScheduleTitle.isEmpty)
             }
 
-            // スケジュール一覧（既存のコードを保持）
             List {
                 ForEach(viewModel.schedules) { schedule in
                     HStack {
                         VStack(alignment: .leading) {
                             Text(schedule.title)
-                            Text(schedule.date.formatted(date: .omitted, time: .shortened))  // 時間のみ表示
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            if let date = schedule.date {
+                                Text(date.formatted(date: .omitted, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         Spacer()
 
@@ -100,11 +128,6 @@ struct ScheduleListView: View {
                             }
                         }
                         .buttonStyle(.borderless)
-                    }
-                }
-                .onDelete { indices in
-                    indices.forEach { index in
-                        viewModel.deleteSchedule(viewModel.schedules[index])
                     }
                 }
             }
