@@ -171,24 +171,28 @@ class AppViewModel: ObservableObject {
     func syncGoogleCalendar() async {
         guard persistenceService.loadGoogleAuthToken() != nil else {
             print("Googleアクセストークンが見つかりません。認証が必要です。")
-            isAuthenticatedWithGoogle = false
+            await MainActor.run {
+                isAuthenticatedWithGoogle = false
+            }
             return
         }
 
         print("Googleカレンダーと同期を開始します...")
 
         do {
-            let googleSchedules =
-                try await googleCalendarService.fetchSchedules()
+            let googleSchedules = try await googleCalendarService.fetchSchedules()
             print("Googleカレンダーから \(googleSchedules.count) 件のイベントを取得しました。")
-            self.mergeGoogleSchedules(googleSchedules)
-            self.sortSchedules()
-            self.scheduleMeetLinkOpening()  // 同期後タイマーを再設定
-            self.saveData()
+            
+            // UI更新とタイマー設定をメインスレッドで実行
+            await MainActor.run {
+                self.mergeGoogleSchedules(googleSchedules)
+                self.sortSchedules()
+                self.scheduleMeetLinkOpening()  // タイマーを再設定
+                self.saveData()
+            }
+            
             print("Googleカレンダーとの同期完了。")
-
         } catch {
-            // エラーハンドリング
             print("スケジュールの取得に失敗しました: \(error)")
         }
     }
