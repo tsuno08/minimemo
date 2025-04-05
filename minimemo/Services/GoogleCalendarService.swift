@@ -37,10 +37,10 @@ protocol GoogleCalendarServiceProtocol {
     /// Googleカレンダーからイベント（スケジュール）を取得します。
     /// - Throws: GoogleCalendarServiceError
     /// - Returns: アプリ内モデル (`Schedule`) の配列
-    func fetchSchedules() async throws -> [Schedule] // Add return type and throws
+    func fetchSchedules() async throws -> [Schedule]
 }
 
-class GoogleCalendarService: GoogleCalendarServiceProtocol { // クラス名を Impl に変更推奨
+class GoogleCalendarService: GoogleCalendarServiceProtocol {
 
     private let service = GTLRCalendarService()
 
@@ -49,7 +49,6 @@ class GoogleCalendarService: GoogleCalendarServiceProtocol { // クラス名を 
              print("[GoogleCalendarService] Error: Not signed in.")
             throw GoogleCalendarServiceError.notSignedIn
         }
-        // 毎回Authorizerを設定するのが安全
         service.authorizer = user.fetcherAuthorizer
 
         let query = GTLRCalendarQuery_EventsList.query(withCalendarId: "primary")

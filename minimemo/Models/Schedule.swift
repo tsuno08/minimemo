@@ -8,36 +8,21 @@
 import Foundation
 
 struct Schedule: Identifiable, Codable, Hashable {
-    // Identifiable準拠のための必須プロパティ (一意なID)
     let id: UUID
-
-    // スケジュールのタイトル
     var title: String
-
-    // スケジュールの日時
     var date: Date
-
-    // Google Meetなどのビデオ会議リンク (オプショナル)
     var meetLink: String?
-
-    // スケジュールの詳細なメモ (オプショナル)
     var notes: String?
-
-    // Googleカレンダーから取得したイベントかどうかのフラグ
     var isGoogleCalendarSchedule: Bool
-
-    // 対応するGoogleカレンダーのイベントID (オプショナル)
-    // Googleカレンダー上でイベントを識別するために使用可能
     var googleScheduleId: String?
 
-    // 新しいスケジュールを作成するためのイニシャライザ (例)
-    init(id: UUID = UUID(), // デフォルトで新しいUUIDを生成
+    init(id: UUID = UUID(),
          title: String,
          date: Date,
-         meetLink: String? = nil, // デフォルトはnil
-         notes: String? = nil,    // デフォルトはnil
-         isGoogleCalendarSchedule: Bool = false, // デフォルトはfalse
-         googleScheduleId: String? = nil) // デフォルトはnil
+         meetLink: String? = nil,
+         notes: String? = nil,
+         isGoogleCalendarSchedule: Bool = false, 
+         googleScheduleId: String? = nil)
     {
         self.id = id
         self.title = title
