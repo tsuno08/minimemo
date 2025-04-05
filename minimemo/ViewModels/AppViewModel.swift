@@ -70,11 +70,6 @@ class AppViewModel: ObservableObject {
         isLoading = false
         print(
             "データの読み込み完了。 Schedules: \(schedules.count), Notes: \(notes.count)")
-
-        // 必要であれば、起動時にGoogleカレンダーと同期
-        // if isAuthenticatedWithGoogle {
-        //     syncGoogleCalendar()
-        // }
     }
 
     // 内部的にデータが変更された後に呼ぶ
@@ -114,8 +109,6 @@ class AppViewModel: ObservableObject {
         let idsToDelete = offsets.map { schedules[$0].id }
         idsToDelete.forEach { cancelMeetLinkTimer(for: $0) }  // タイマーをキャンセル
         schedules.remove(atOffsets: offsets)
-        // Note: Googleカレンダー由来のイベント削除はGoogle API経由で行うか、
-        //       単にアプリの表示から消すだけにするか仕様による。
         saveData()
     }
 
@@ -149,7 +142,6 @@ class AppViewModel: ObservableObject {
         let new = Note(content: content)
         // 新しいメモを先頭に追加する場合
         notes.insert(new, at: 0)
-        // sortNotes() // または作成日時/更新日時でソート
         saveData()
     }
 
@@ -159,7 +151,6 @@ class AppViewModel: ObservableObject {
         }
         notes[index] = item
         notes[index].modifiedAt = Date()  // 更新日時を更新
-        // sortNotes() // 必要ならソート
         saveData()
     }
 
@@ -256,8 +247,6 @@ class AppViewModel: ObservableObject {
             print("時間です: \(schedule.title) - Meetリンクを開きます: \(meetLink)")
             if let url = URL(string: meetLink) {
                 NSWorkspace.shared.open(url)  // デフォルトブラウザでURLを開く
-                // オプション: 通知を表示する
-                self?.showMeetNotification(for: schedule)
             }
             // タイマー完了後に辞書から削除
             self?.meetLinkTimers.removeValue(forKey: schedule.id)
@@ -308,42 +297,6 @@ class AppViewModel: ObservableObject {
         isLoading = false
 
         print("データのリセット完了。")
-    }
-
-    // MARK: - Notifications (Optional)
-
-    private func showMeetNotification(for schedule: Schedule) {
-        // UserNotificationsフレームワークを使って通知を表示する
-        // 事前にユーザーからの通知許可を得る必要がある (アプリ起動時など)
-        let content = UNMutableNotificationContent()
-        content.title = "まもなく開始: \(schedule.title)"
-        content.body = "Google Meetに参加しますか？"
-        content.sound = .default
-
-        // トリガーは即時通知
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString, content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("通知エラー: \(error.localizedDescription)")
-            }
-        }
-    }
-
-    func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [
-            .alert, .sound, .badge,
-        ]) {
-            granted, error in
-            if granted {
-                print("通知許可が得られました。")
-            } else if let error = error {
-                print("通知許可エラー: \(error.localizedDescription)")
-            }
-        }
     }
 
     // MARK: - Deinitialization
