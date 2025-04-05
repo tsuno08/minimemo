@@ -10,6 +10,8 @@ import SwiftUI
 struct NoteListView: View {
     @EnvironmentObject var viewModel: AppViewModel
     @State private var newNoteContent: String = ""
+    @State private var editingNote: Note? = nil
+    @State private var editingContent: String = ""
 
     // 共通のメモ追加処理を関数化
     private func addNote() {
@@ -18,6 +20,11 @@ struct NoteListView: View {
         }
         viewModel.addNote(content: newNoteContent)
         newNoteContent = ""
+    }
+
+    private func startEditing(_ note: Note) {
+        editingNote = note
+        editingContent = note.content
     }
 
     var body: some View {
@@ -49,28 +56,50 @@ struct NoteListView: View {
             // メモ一覧
             List {
                 ForEach(viewModel.notes) { note in
-                    HStack {
-                        Text(note.content)
-                        Spacer()
-                        Button(action: {
-                            viewModel.deleteNote(note)
-                        }) {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
-                        }
-                        .buttonStyle(.borderless)
-                        .onHover { hovering in
-                            if hovering {
-                                NSCursor.pointingHand.push()
-                            } else {
-                                NSCursor.pop()
+                    if editingNote?.id == note.id {
+                        HStack {
+                            TextField("メモ内容", text: $editingContent)
+                                .textFieldStyle(.roundedBorder)
+                                .onSubmit {
+                                    var updatedNote = note
+                                    updatedNote.content = editingContent
+                                    viewModel.updateNote(updatedNote)
+                                    editingNote = nil
+                                }
+
+                            Button("保存") {
+                                var updatedNote = note
+                                updatedNote.content = editingContent
+                                viewModel.updateNote(updatedNote)
+                                editingNote = nil
+                            }
+                            .disabled(editingContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                            Button("キャンセル") {
+                                editingNote = nil
                             }
                         }
-                    }
-                }
-                .onDelete { indices in
-                    indices.forEach { index in
-                        viewModel.deleteNote(viewModel.notes[index])
+                        .padding(.vertical, 4)
+                    } else {
+                        HStack {
+                            Text(note.content)
+                            Spacer()
+                            
+                            Button(action: {
+                                startEditing(note)
+                            }) {
+                                Image(systemName: "pencil")
+                            }
+                            .buttonStyle(.borderless)
+
+                            Button(action: {
+                                viewModel.deleteNote(note)
+                            }) {
+                                Image(systemName: "trash")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.borderless)
+                        }
                     }
                 }
             }

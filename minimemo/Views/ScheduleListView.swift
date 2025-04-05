@@ -13,6 +13,10 @@ struct ScheduleListView: View {
     @State private var selectedTime: Date? = nil  // オプショナルに変更
     @State private var newScheduleMeetLink: String = ""
     @State private var showDatePicker: Bool = false  // DatePicker表示制御用
+    @State private var editingSchedule: Schedule? = nil  // 編集中のスケジュール
+    @State private var editingTitle: String = ""        // 編集中のタイトル
+    @State private var editingMeetLink: String = ""     // 編集中のMeetリンク
+    @State private var editingDate: Date? = nil         // 編集中の日時
 
     private func addSchedule() {
         guard !newScheduleTitle.isEmpty else { return }
@@ -34,6 +38,13 @@ struct ScheduleListView: View {
         newScheduleMeetLink = ""
         selectedTime = nil
         showDatePicker = false
+    }
+
+    private func startEditing(_ schedule: Schedule) {
+        editingSchedule = schedule
+        editingTitle = schedule.title
+        editingMeetLink = schedule.meetLink ?? ""
+        editingDate = schedule.date
     }
 
     var body: some View {
@@ -94,40 +105,86 @@ struct ScheduleListView: View {
 
             List {
                 ForEach(viewModel.schedules) { schedule in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(schedule.title)
-                            if let date = schedule.date {
-                                Text(date.formatted(date: .omitted, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        Spacer()
+                    if editingSchedule?.id == schedule.id {
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField("タイトル", text: $editingTitle)
+                                .textFieldStyle(.roundedBorder)
 
-                        if let meetLink = schedule.meetLink, !meetLink.isEmpty {
-                            Button("Meet") {
-                                if let url = URL(string: meetLink) {
-                                    NSWorkspace.shared.open(url)
+                            HStack {
+                                Button(action: {
+                                    if editingDate == nil {
+                                        editingDate = Date()
+                                    } else {
+                                        editingDate = nil
+                                    }
+                                }) {
+                                    Image(systemName: editingDate == nil ? "clock" : "clock.fill")
+                                }
+                                .buttonStyle(.borderless)
+
+                                if let _ = editingDate {
+                                    DatePicker("", selection: Binding(
+                                        get: { editingDate ?? Date() },
+                                        set: { editingDate = $0 }
+                                    ), displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                }
+
+                                TextField("Meetリンク", text: $editingMeetLink)
+                                    .textFieldStyle(.roundedBorder)
+
+                                Button("保存") {
+                                    var updatedSchedule = schedule
+                                    updatedSchedule.title = editingTitle
+                                    updatedSchedule.date = editingDate
+                                    updatedSchedule.meetLink = editingMeetLink.isEmpty ? nil : editingMeetLink
+                                    viewModel.updateSchedule(updatedSchedule)
+                                    editingSchedule = nil
+                                }
+                                .disabled(editingTitle.isEmpty)
+
+                                Button("キャンセル") {
+                                    editingSchedule = nil
                                 }
                             }
-                            .buttonStyle(.link)
                         }
-
-                        Button(action: {
-                            viewModel.deleteSchedule(schedule)
-                        }) {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
-                        }
-                        .onHover { hovering in
-                            if hovering {
-                                NSCursor.pointingHand.push()
-                            } else {
-                                NSCursor.pop()
+                        .padding(.vertical, 4)
+                    } else {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(schedule.title)
+                                if let date = schedule.date {
+                                    Text(date.formatted(date: .omitted, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
+                            Spacer()
+
+                            if let meetLink = schedule.meetLink, !meetLink.isEmpty {
+                                Button("Meet") {
+                                    if let url = URL(string: meetLink) {
+                                        NSWorkspace.shared.open(url)
+                                    }
+                                }
+                                .buttonStyle(.link)
+                            }
+
+                            Button(action: {
+                                startEditing(schedule)
+                            }) {
+                                Image(systemName: "pencil")
+                            }
+                            .buttonStyle(.borderless)
+
+                            Button(action: {
+                                viewModel.deleteSchedule(schedule)
+                            }) {
+                                Image(systemName: "trash")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.borderless)
                         }
-                        .buttonStyle(.borderless)
                     }
                 }
             }
