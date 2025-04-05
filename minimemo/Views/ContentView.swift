@@ -33,6 +33,7 @@ struct ContentView: View {
                 return
             }
             PersistenceService().saveGoogleAuthToken(result.user.accessToken.tokenString)
+            viewModel.isAuthenticatedWithGoogle = true
             print("Google Sign-in succeeded with user: \(result.user.accessToken.tokenString)")
         }
     }
@@ -58,6 +59,7 @@ struct ContentView: View {
                         await viewModel.syncGoogleCalendar()
                     }
                 }
+                .disabled(!viewModel.isAuthenticatedWithGoogle)
 
                 Spacer()
 
@@ -65,10 +67,17 @@ struct ContentView: View {
                     viewModel.resetData()
                 }
                 .foregroundColor(.red)
-
+            }
+            
+            // Google認証関連のボタンを別の段に表示
+            if viewModel.isAuthenticatedWithGoogle {
+                Button("ログアウト") {
+                    viewModel.disconnectGoogleAccount()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
                 GoogleSignInButton(action: handleSignInButton)
-                    .frame(width: 200, height: 40)
-                    .padding(.leading, 8)
+                    .frame(height: 40, alignment: .leading)
             }
 
             Divider()
