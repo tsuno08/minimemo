@@ -17,8 +17,6 @@ class AppViewModel: ObservableObject {
 
     @Published var schedules: [Schedule] = []
     @Published var notes: [Note] = []
-    @Published var isLoading: Bool = false  // データロード中や同期中を示すフラグ
-    @Published var errorMessage: String?  // エラーメッセージ表示用
     @Published var isAuthenticatedWithGoogle: Bool = false  // Google認証状態
 
     // MARK: - Services (依存サービス)
@@ -52,8 +50,6 @@ class AppViewModel: ObservableObject {
     // MARK: - Data Loading and Saving
 
     func loadData() {
-        isLoading = true
-        errorMessage = nil
         print("データを読み込んでいます...")
 
         // 同期的に読み込む場合 (サービスの設計による)
@@ -67,7 +63,6 @@ class AppViewModel: ObservableObject {
         // Meetリンクタイマーを再スケジュール
         scheduleMeetLinkOpening()
 
-        isLoading = false
         print(
             "データの読み込み完了。 Schedules: \(schedules.count), Notes: \(notes.count)")
     }
@@ -176,17 +171,15 @@ class AppViewModel: ObservableObject {
     func syncGoogleCalendar() async {
         guard persistenceService.loadGoogleAuthToken() != nil else {
             print("Googleアクセストークンが見つかりません。認証が必要です。")
+            isAuthenticatedWithGoogle = false
             return
         }
 
-        isLoading = true
-        errorMessage = nil
         print("Googleカレンダーと同期を開始します...")
 
         do {
             let googleSchedules =
                 try await googleCalendarService.fetchSchedules()
-            self.isLoading = false
             print("Googleカレンダーから \(googleSchedules.count) 件のイベントを取得しました。")
             self.mergeGoogleSchedules(googleSchedules)
             self.sortSchedules()
@@ -292,9 +285,6 @@ class AppViewModel: ObservableObject {
 
         // 永続化データをクリア
         persistenceService.clear()
-
-        errorMessage = nil
-        isLoading = false
 
         print("データのリセット完了。")
     }
