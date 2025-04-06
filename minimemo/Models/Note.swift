@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Note: Identifiable, Codable, Hashable {
+struct Note: Identifiable, Codable {
     let id: UUID
     var content: String
     let createdAt: Date
@@ -18,11 +18,6 @@ struct Note: Identifiable, Codable, Hashable {
         self.content = content
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
-    }
-
-    // Hashable準拠のための実装
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
     }
 
     static func == (lhs: Note, rhs: Note) -> Bool {

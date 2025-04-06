@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Schedule: Identifiable, Codable, Hashable {
+struct Schedule: Identifiable, Codable {
     let id: UUID
     var title: String
     var date: Date?  // オプショナルに変更
@@ -31,11 +31,6 @@ struct Schedule: Identifiable, Codable, Hashable {
         self.notes = notes
         self.isGoogleCalendarSchedule = isGoogleCalendarSchedule
         self.googleScheduleId = googleScheduleId
-    }
-
-    // Hashable準拠のための実装 (idが同じなら同じインスタンスとみなす)
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
     }
 
     static func == (lhs: Schedule, rhs: Schedule) -> Bool {
