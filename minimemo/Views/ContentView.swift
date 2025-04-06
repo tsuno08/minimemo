@@ -10,7 +10,9 @@ import GoogleSignInSwift
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var viewModel: AppViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var noteViewModel: NoteViewModel
+    @EnvironmentObject var scheduleViewModel: ScheduleViewModel
 
     private func handleSignInButton() {
         guard
@@ -33,7 +35,7 @@ struct ContentView: View {
                 return
             }
             PersistenceService().saveGoogleAuthToken(result.user.accessToken.tokenString)
-            viewModel.isAuthenticatedWithGoogle = true
+            authViewModel.isAuthenticatedWithGoogle = true
             print("Google Sign-in succeeded with user: \(result.user.accessToken.tokenString)")
         }
     }
@@ -56,23 +58,24 @@ struct ContentView: View {
             HStack {
                 Button("Googleカレンダーと同期") {
                     Task {
-                        await viewModel.syncGoogleCalendar()
+                        await scheduleViewModel.syncGoogleCalendar()
                     }
                 }
-                .disabled(!viewModel.isAuthenticatedWithGoogle)
+                .disabled(!authViewModel.isAuthenticatedWithGoogle)
 
                 Spacer()
 
                 Button("データをリセット") {
-                    viewModel.resetData()
+                    scheduleViewModel.resetSchedules()
+                    noteViewModel.resetNotes()
                 }
                 .foregroundColor(.red)
             }
             
             // Google認証関連のボタンを別の段に表示
-            if viewModel.isAuthenticatedWithGoogle {
+            if authViewModel.isAuthenticatedWithGoogle {
                 Button("ログアウト") {
-                    viewModel.disconnectGoogleAccount()
+                    authViewModel.disconnectGoogleAccount()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {

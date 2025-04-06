@@ -10,13 +10,17 @@ import GoogleSignIn
 
 @main
 struct minimemoApp: App {
-    // アプリケーションの状態を管理するクラス（後述）
-    @StateObject private var appViewModel = AppViewModel()
+    @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var noteViewModel = NoteViewModel()
+    @StateObject private var scheduleViewModel = ScheduleViewModel()
 
     var body: some Scene {
         MenuBarExtra("アプリ名", systemImage: "calendar.badge.clock") { // アイコンは適宜変更
             ContentView()
-                .environmentObject(appViewModel) // ContentViewにAppStateを渡す
+//                .environmentObject(appViewModel)
+                .environmentObject(authViewModel)
+                .environmentObject(noteViewModel)
+                .environmentObject(scheduleViewModel)
                 .onOpenURL { url in
                           GIDSignIn.sharedInstance.handle(url)
                         }

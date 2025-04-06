@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ScheduleListView: View {
-    @EnvironmentObject var viewModel: AppViewModel
+    @EnvironmentObject var viewModel: ScheduleViewModel
     @State private var newScheduleTitle: String = ""
     @State private var selectedTime: Date? = nil  // オプショナルに変更
     @State private var newScheduleMeetLink: String = ""

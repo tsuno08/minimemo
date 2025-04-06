@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct NoteListView: View {
-    @EnvironmentObject var viewModel: AppViewModel
+    @EnvironmentObject var viewModel: NoteViewModel
     @State private var newNoteContent: String = ""
     @State private var editingNote: Note? = nil
     @State private var editingContent: String = ""
