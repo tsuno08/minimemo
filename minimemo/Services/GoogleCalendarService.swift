@@ -53,17 +53,14 @@ class GoogleCalendarService: GoogleCalendarServiceProtocol {
 
         let query = GTLRCalendarQuery_EventsList.query(
             withCalendarId: "primary")
-        let calendar = Calendar.current
         let now = Date()
-        guard let oneDayAgo = calendar.date(byAdding: .day, value: -1, to: now),
-            let sevenDaysLater = calendar.date(
-                byAdding: .day, value: 7, to: now)
-        else {
-            // このエラーは通常発生しないはず
-            fatalError("Failed to calculate date range.")
-        }
-        query.timeMin = GTLRDateTime(date: oneDayAgo)
-        query.timeMax = GTLRDateTime(date: sevenDaysLater)
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: now).addingTimeInterval(9 * 60 * 60)
+        let todayEnd = calendar.date(
+            byAdding: .day, value: 1, to: todayStart)!
+
+        query.timeMin = GTLRDateTime(date: todayStart)
+        query.timeMax = GTLRDateTime(date: todayEnd)
         query.orderBy = kGTLRCalendarOrderByStartTime
         query.singleEvents = true
 
