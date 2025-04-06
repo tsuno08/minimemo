@@ -70,7 +70,21 @@ struct ContentView: View {
 
                 Spacer()
 
-                Button("データをリセット") {
+                Button("コピー") {
+                    let scheduleText = scheduleViewModel.schedules.map {
+                        "- \($0.title)"
+                    }.joined(separator: "\n")
+                    let noteText = noteViewModel.notes.map { "- \($0.content)" }.joined(separator: "\n")
+                    let conbinedText = "スケジュール\n\(scheduleText)\n\nメモ\n\(noteText)"
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(conbinedText, forType: .string)
+                    print("スケジュールとメモをコピーしました。")
+                }
+
+                Spacer()
+
+                Button("リセット") {
                     scheduleViewModel.resetSchedules()
                     noteViewModel.resetNotes()
                 }
