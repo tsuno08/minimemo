@@ -5,8 +5,8 @@
 //  Created by 鶴田臨 on 2025/04/06.
 //
 
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 
 protocol SchedulePersistenceProtocol {
@@ -20,11 +20,11 @@ protocol ScheduleGoogleCalendarProtocol {
 
 class ScheduleViewModel: ObservableObject {
     @Published var schedules: [Schedule] = []
-    
+
     private let persistenceService: PersistenceService
     private let googleCalendarService: GoogleCalendarService
     private var meetLinkTimers: [UUID: Timer] = [:]
-    
+
     init(
         persistenceService: PersistenceService = PersistenceService(),
         googleCalendarService: GoogleCalendarService = GoogleCalendarService()
@@ -33,23 +33,27 @@ class ScheduleViewModel: ObservableObject {
         self.googleCalendarService = googleCalendarService
         loadData()
     }
-    
+
     // MARK: - Data Loading and Saving
-    
+
     func loadData() {
         self.schedules = persistenceService.loadSchedules()
         sortSchedules()
         scheduleMeetLinkOpening()
     }
-    
+
     private func saveData() {
         persistenceService.saveSchedules(schedules)
     }
-    
+
     // MARK: - Schedule CRUD
-    
-    func addSchedule(title: String, date: Date? = nil, meetLink: String? = nil, notes: String? = nil) {
-        let new = Schedule(title: title, date: date, meetLink: meetLink, notes: notes)
+
+    func addSchedule(
+        title: String, date: Date? = nil, meetLink: String? = nil,
+        notes: String? = nil
+    ) {
+        let new = Schedule(
+            title: title, date: date, meetLink: meetLink, notes: notes)
         schedules.append(new)
         sortSchedules()
         if date != nil {
@@ -57,16 +61,17 @@ class ScheduleViewModel: ObservableObject {
         }
         saveData()
     }
-    
+
     func updateSchedule(_ item: Schedule) {
-        guard let index = schedules.firstIndex(where: { $0.id == item.id }) else { return }
+        guard let index = schedules.firstIndex(where: { $0.id == item.id })
+        else { return }
         schedules[index] = item
         sortSchedules()
         cancelMeetLinkTimer(for: item.id)
         scheduleMeetLinkOpening(for: item)
         saveData()
     }
-    
+
     func deleteSchedule(_ item: Schedule) {
         if let index = schedules.firstIndex(where: { $0.id == item.id }) {
             cancelMeetLinkTimer(for: item.id)
@@ -74,7 +79,7 @@ class ScheduleViewModel: ObservableObject {
             saveData()
         }
     }
-    
+
     private func sortSchedules() {
         schedules.sort { a, b in
             switch (a.date, b.date) {
@@ -85,9 +90,9 @@ class ScheduleViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Google Calendar Sync
-    
+
     func syncGoogleCalendar() async {
         guard persistenceService.loadGoogleAuthToken() != nil else {
             print("Googleアクセストークンが見つかりません。認証が必要です。")
@@ -95,45 +100,51 @@ class ScheduleViewModel: ObservableObject {
         }
 
         print("Googleカレンダーと同期を開始します...")
-        
+
         do {
-            let googleSchedules = try await googleCalendarService.fetchSchedules()
+            let googleSchedules =
+                try await googleCalendarService.fetchSchedules()
             print("Googleカレンダーから \(googleSchedules.count) 件のイベントを取得しました。")
-            
+
             await MainActor.run {
                 self.mergeGoogleSchedules(googleSchedules)
                 self.sortSchedules()
                 self.scheduleMeetLinkOpening()
                 self.saveData()
             }
-            
+
             print("Googleカレンダーとの同期完了。")
         } catch {
             print("スケジュールの取得に失敗しました: \(error)")
         }
     }
-    
+
     private func mergeGoogleSchedules(_ googleSchedules: [Schedule]) {
         schedules.removeAll { $0.isGoogleCalendarSchedule }
         schedules.append(contentsOf: googleSchedules)
     }
-    
+
     // MARK: - Meet Link Scheduling
-    
+
     private func scheduleMeetLinkOpening(for schedule: Schedule) {
         guard let meetLink = schedule.meetLink,
-              !meetLink.isEmpty,
-              let date = schedule.date,
-              date > Date() else {
+            !meetLink.isEmpty,
+            let date = schedule.date,
+            date > Date()
+        else {
             return
         }
-        
+
         let timeInterval = date.timeIntervalSinceNow
-        print("Meetリンクタイマー設定: \(schedule.title) (\(schedule.id)) - \(timeInterval)秒後")
-        
+        print(
+            "Meetリンクタイマー設定: \(schedule.title) (\(schedule.id)) - \(timeInterval)秒後"
+        )
+
         cancelMeetLinkTimer(for: schedule.id)
-        
-        let timer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
+
+        let timer = Timer.scheduledTimer(
+            withTimeInterval: timeInterval, repeats: false
+        ) { [weak self] _ in
             print("時間です: \(schedule.title) - Meetリンクを開きます: \(meetLink)")
             if let url = URL(string: meetLink) {
                 NSWorkspace.shared.open(url)
@@ -142,7 +153,7 @@ class ScheduleViewModel: ObservableObject {
         }
         meetLinkTimers[schedule.id] = timer
     }
-    
+
     func scheduleMeetLinkOpening() {
         cancelAllMeetLinkTimers()
         print("既存のMeetリンクタイマーをキャンセルし、再スケジュールします。")
@@ -150,7 +161,7 @@ class ScheduleViewModel: ObservableObject {
             scheduleMeetLinkOpening(for: schedule)
         }
     }
-    
+
     private func cancelMeetLinkTimer(for scheduleId: UUID) {
         if let timer = meetLinkTimers[scheduleId] {
             timer.invalidate()
@@ -158,7 +169,7 @@ class ScheduleViewModel: ObservableObject {
             print("Meetリンクタイマーキャンセル: \(scheduleId)")
         }
     }
-    
+
     func cancelAllMeetLinkTimers() {
         print("全てのMeetリンクタイマーをキャンセルします。")
         meetLinkTimers.values.forEach { $0.invalidate() }
@@ -169,7 +180,7 @@ class ScheduleViewModel: ObservableObject {
         schedules = []
         saveData()
     }
-    
+
     deinit {
         cancelAllMeetLinkTimers()
     }

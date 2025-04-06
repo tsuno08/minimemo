@@ -15,7 +15,10 @@ struct NoteListView: View {
 
     // 共通のメモ追加処理を関数化
     private func addNote() {
-        guard !newNoteContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard
+            !newNoteContent.trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty
+        else {
             return
         }
         viewModel.addNote(content: newNoteContent)
@@ -73,7 +76,10 @@ struct NoteListView: View {
                                 viewModel.updateNote(updatedNote)
                                 editingNote = nil
                             }
-                            .disabled(editingContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .disabled(
+                                editingContent.trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                ).isEmpty)
 
                             Button("キャンセル") {
                                 editingNote = nil
@@ -84,7 +90,7 @@ struct NoteListView: View {
                         HStack {
                             Text(note.content)
                             Spacer()
-                            
+
                             Button(action: {
                                 startEditing(note)
                             }) {

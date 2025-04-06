@@ -13,7 +13,10 @@ struct Note: Identifiable, Codable {
     let createdAt: Date
     var modifiedAt: Date
 
-    init(id: UUID = UUID(), content: String, createdAt: Date = Date(), modifiedAt: Date = Date()) {
+    init(
+        id: UUID = UUID(), content: String, createdAt: Date = Date(),
+        modifiedAt: Date = Date()
+    ) {
         self.id = id
         self.content = content
         self.createdAt = createdAt

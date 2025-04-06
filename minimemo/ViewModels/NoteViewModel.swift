@@ -5,8 +5,8 @@
 //  Created by 鶴田臨 on 2025/04/06.
 //
 
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 
 protocol NotePersistenceProtocol {
@@ -44,7 +44,9 @@ class NoteViewModel: ObservableObject {
     }
 
     func updateNote(_ item: Note) {
-        guard let index = notes.firstIndex(where: { $0.id == item.id }) else { return }
+        guard let index = notes.firstIndex(where: { $0.id == item.id }) else {
+            return
+        }
         notes[index] = item
         notes[index].modifiedAt = Date()
         saveData()
@@ -57,7 +59,7 @@ class NoteViewModel: ObservableObject {
         }
     }
 
-        func resetNotes() {
+    func resetNotes() {
         notes = []
         saveData()
     }

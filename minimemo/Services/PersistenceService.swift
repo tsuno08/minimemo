@@ -15,7 +15,6 @@ protocol PersistenceServiceProtocol {
     // Google認証トークンなどの保存/読み込みも担当する可能性あり
     func loadGoogleAuthToken() -> String?
     func saveGoogleAuthToken(_ token: String?)
-    func clear()  // リセット用
 }
 
 // UserDefaultsを使用したデータ永続化サービスの実装
@@ -25,9 +24,12 @@ class PersistenceService: PersistenceServiceProtocol {
     private let googleAuthTokenKey = "googleAuthTokenKey"
 
     func loadSchedules() -> [Schedule] {
-        guard let data = UserDefaults.standard.data(forKey: schedulesKey) else { return [] }
+        guard let data = UserDefaults.standard.data(forKey: schedulesKey) else {
+            return []
+        }
         do {
-            let schedules = try JSONDecoder().decode([Schedule].self, from: data)
+            let schedules = try JSONDecoder().decode(
+                [Schedule].self, from: data)
             return schedules
         } catch {
             print("Error decoding schedules: \(error)")
@@ -45,7 +47,9 @@ class PersistenceService: PersistenceServiceProtocol {
     }
 
     func loadNotes() -> [Note] {
-        guard let data = UserDefaults.standard.data(forKey: notesKey) else { return [] }
+        guard let data = UserDefaults.standard.data(forKey: notesKey) else {
+            return []
+        }
         do {
             let notes = try JSONDecoder().decode([Note].self, from: data)
             return notes
@@ -70,10 +74,5 @@ class PersistenceService: PersistenceServiceProtocol {
 
     func saveGoogleAuthToken(_ token: String?) {
         UserDefaults.standard.set(token, forKey: googleAuthTokenKey)
-    }
-
-    func clear() {
-        UserDefaults.standard.removeObject(forKey: schedulesKey)
-        UserDefaults.standard.removeObject(forKey: notesKey)
     }
 }

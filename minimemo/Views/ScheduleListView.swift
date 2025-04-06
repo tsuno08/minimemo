@@ -14,18 +14,20 @@ struct ScheduleListView: View {
     @State private var newScheduleMeetLink: String = ""
     @State private var showDatePicker: Bool = false  // DatePicker表示制御用
     @State private var editingSchedule: Schedule? = nil  // 編集中のスケジュール
-    @State private var editingTitle: String = ""        // 編集中のタイトル
-    @State private var editingMeetLink: String = ""     // 編集中のMeetリンク
-    @State private var editingDate: Date? = nil         // 編集中の日時
+    @State private var editingTitle: String = ""  // 編集中のタイトル
+    @State private var editingMeetLink: String = ""  // 編集中のMeetリンク
+    @State private var editingDate: Date? = nil  // 編集中の日時
 
     private func addSchedule() {
         guard !newScheduleTitle.isEmpty else { return }
-        
+
         let combinedDate: Date?
         if let selectedTime = selectedTime {
             let calendar = Calendar.current
-            var components = calendar.dateComponents([.year, .month, .day], from: Date())
-            let timeComponents = calendar.dateComponents([.hour, .minute], from: selectedTime)
+            var components = calendar.dateComponents(
+                [.year, .month, .day], from: Date())
+            let timeComponents = calendar.dateComponents(
+                [.hour, .minute], from: selectedTime)
             components.hour = timeComponents.hour
             components.minute = timeComponents.minute
             combinedDate = calendar.date(from: components)
@@ -33,7 +35,9 @@ struct ScheduleListView: View {
             combinedDate = nil
         }
 
-        viewModel.addSchedule(title: newScheduleTitle, date: combinedDate, meetLink: newScheduleMeetLink)
+        viewModel.addSchedule(
+            title: newScheduleTitle, date: combinedDate,
+            meetLink: newScheduleMeetLink)
         newScheduleTitle = ""
         newScheduleMeetLink = ""
         selectedTime = nil
@@ -75,7 +79,8 @@ struct ScheduleListView: View {
 
                 // 日時選択が有効な場合のみDatePickerを表示
                 if showDatePicker {
-                    DatePicker("",
+                    DatePicker(
+                        "",
                         selection: Binding(
                             get: { selectedTime ?? Date() },
                             set: { selectedTime = $0 }
@@ -118,15 +123,20 @@ struct ScheduleListView: View {
                                         editingDate = nil
                                     }
                                 }) {
-                                    Image(systemName: editingDate == nil ? "clock" : "clock.fill")
+                                    Image(
+                                        systemName: editingDate == nil
+                                            ? "clock" : "clock.fill")
                                 }
                                 .buttonStyle(.borderless)
 
-                                if let _ = editingDate {
-                                    DatePicker("", selection: Binding(
-                                        get: { editingDate ?? Date() },
-                                        set: { editingDate = $0 }
-                                    ), displayedComponents: .hourAndMinute)
+                                if editingDate != nil {
+                                    DatePicker(
+                                        "",
+                                        selection: Binding(
+                                            get: { editingDate ?? Date() },
+                                            set: { editingDate = $0 }
+                                        ), displayedComponents: .hourAndMinute
+                                    )
                                     .labelsHidden()
                                 }
 
@@ -137,7 +147,9 @@ struct ScheduleListView: View {
                                     var updatedSchedule = schedule
                                     updatedSchedule.title = editingTitle
                                     updatedSchedule.date = editingDate
-                                    updatedSchedule.meetLink = editingMeetLink.isEmpty ? nil : editingMeetLink
+                                    updatedSchedule.meetLink =
+                                        editingMeetLink.isEmpty
+                                        ? nil : editingMeetLink
                                     viewModel.updateSchedule(updatedSchedule)
                                     editingSchedule = nil
                                 }
@@ -154,14 +166,19 @@ struct ScheduleListView: View {
                             VStack(alignment: .leading) {
                                 Text(schedule.title)
                                 if let date = schedule.date {
-                                    Text(date.formatted(date: .omitted, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                    Text(
+                                        date.formatted(
+                                            date: .omitted, time: .shortened)
+                                    )
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                                 }
                             }
                             Spacer()
 
-                            if let meetLink = schedule.meetLink, !meetLink.isEmpty {
+                            if let meetLink = schedule.meetLink,
+                                !meetLink.isEmpty
+                            {
                                 Button("Meet") {
                                     if let url = URL(string: meetLink) {
                                         NSWorkspace.shared.open(url)

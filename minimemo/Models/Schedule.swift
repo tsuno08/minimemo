@@ -15,14 +15,15 @@ struct Schedule: Identifiable, Codable {
     var isGoogleCalendarSchedule: Bool
     var googleScheduleId: String?
 
-    init(id: UUID = UUID(),
-         title: String,
-         date: Date? = nil,  // デフォルト値をnilに変更
-         meetLink: String? = nil,
-         notes: String? = nil,
-         isGoogleCalendarSchedule: Bool = false, 
-         googleScheduleId: String? = nil)
-    {
+    init(
+        id: UUID = UUID(),
+        title: String,
+        date: Date? = nil,
+        meetLink: String? = nil,
+        notes: String? = nil,
+        isGoogleCalendarSchedule: Bool = false,
+        googleScheduleId: String? = nil
+    ) {
         self.id = id
         self.title = title
         self.date = date

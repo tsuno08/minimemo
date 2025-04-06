@@ -31,12 +31,17 @@ struct ContentView: View {
             ]
         ) { signInResult, error in
             guard let result = signInResult else {
-                print("Google Sign-in failed with error: \(String(describing: error?.localizedDescription))")
+                print(
+                    "Google Sign-in failed with error: \(String(describing: error?.localizedDescription))"
+                )
                 return
             }
-            PersistenceService().saveGoogleAuthToken(result.user.accessToken.tokenString)
+            PersistenceService().saveGoogleAuthToken(
+                result.user.accessToken.tokenString)
             authViewModel.isAuthenticatedWithGoogle = true
-            print("Google Sign-in succeeded with user: \(result.user.accessToken.tokenString)")
+            print(
+                "Google Sign-in succeeded with user: \(result.user.accessToken.tokenString)"
+            )
         }
     }
 
@@ -71,7 +76,7 @@ struct ContentView: View {
                 }
                 .foregroundColor(.red)
             }
-            
+
             // Google認証関連のボタンを別の段に表示
             if authViewModel.isAuthenticatedWithGoogle {
                 Button("ログアウト") {
