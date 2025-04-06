@@ -10,9 +10,8 @@ import Foundation
 struct Schedule: Identifiable, Codable {
     let id: UUID
     var title: String
-    var date: Date?  // オプショナルに変更
+    var date: Date?
     var meetLink: String?
-    var notes: String?
     var isGoogleCalendarSchedule: Bool
     var googleScheduleId: String?
 
@@ -28,7 +27,6 @@ struct Schedule: Identifiable, Codable {
         self.title = title
         self.date = date
         self.meetLink = meetLink
-        self.notes = notes
         self.isGoogleCalendarSchedule = isGoogleCalendarSchedule
         self.googleScheduleId = googleScheduleId
     }
